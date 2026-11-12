@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS bank_transfer_requests (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ fund_id BIGINT UNSIGNED NOT NULL,
+ user_id BIGINT UNSIGNED NOT NULL,
+ amount INT UNSIGNED NOT NULL,
+ bank_bin CHAR(6) NOT NULL,
+ account_number VARCHAR(19) NOT NULL,
+ account_name VARCHAR(50) NOT NULL,
+ transfer_memo VARCHAR(25) NOT NULL UNIQUE,
+ status ENUM('pending','paid','cancelled') NOT NULL DEFAULT 'pending',
+ bank_reference VARCHAR(100) NULL UNIQUE,
+ verified_by BIGINT UNSIGNED NULL,
+ verified_at DATETIME NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uq_bank_request_member (fund_id,user_id),
+ FOREIGN KEY (fund_id) REFERENCES monthly_funds(id),
+ FOREIGN KEY (user_id) REFERENCES users(id),
+ FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL,
+ INDEX idx_bank_request_status (status,created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

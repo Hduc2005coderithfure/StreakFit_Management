@@ -1,0 +1,7 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^public/ - [L]
+    RewriteRule ^assets/(.*)$ public/assets/$1 [L]
+    RewriteRule ^.*$ public/index.php [QSA,L]
+</IfModule>

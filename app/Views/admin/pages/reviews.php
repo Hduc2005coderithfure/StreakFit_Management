@@ -1,0 +1,33 @@
+<div class="admin-metrics admin-review-metrics">
+<?php if ($canViewWorkouts): ?><article class="admin-metric"><div class="admin-metric-caption">Phiên đang tập <?= $adminIcon('activity') ?></div><strong><?= (int)$adminStats['active_workouts'] ?></strong><small>Đối chiếu check-in / check-out</small></article><?php endif; ?>
+<article class="admin-metric"><div class="admin-metric-caption">Yêu cầu kiểm duyệt <?= $adminIcon('reviews') ?></div><strong><?= (int)$adminStats['pending_workouts']+(int)$adminStats['pending_appeals']+(int)$adminStats['pending_reports'] ?></strong><small class="warn">Chờ xem xét trong phạm vi được cấp quyền</small></article>
+</div>
+
+<?php if ($canViewWorkouts): ?>
+<section class="panel admin-page-panel">
+    <div class="section-heading"><div><h2>Buổi tập cần kiểm duyệt</h2><p class="muted">Buổi bị từ chối hoặc tự động đóng. Quyết định duyệt cần đủ thời lượng và ảnh minh chứng.</p></div></div>
+    <?php foreach ($pendingWorkouts as $workout): ?><article class="admin-review-row"><div><b>#<?= (int)$workout['id'] ?> · <?= sf_h($workout['display_name']) ?></b><small><?= sf_h($workout['workout_date']) ?> · <?= (int)floor((int)$workout['duration_seconds'] / 60) ?> phút · <?= sf_h($workout['status']) ?></small><div><?php if ($workout['checkin_image']): ?><a href="?media=<?= (int)$workout['id'] ?>&amp;kind=checkin" target="_blank" rel="noopener">Ảnh check-in</a><?php endif; ?> <?php if ($workout['checkout_image']): ?><a href="?media=<?= (int)$workout['id'] ?>&amp;kind=checkout" target="_blank" rel="noopener">Ảnh check-out</a><?php endif; ?></div></div>
+        <?php if ($canReviewWorkouts): ?><div class="admin-review-actions"><?php foreach (['approve' => 'Duyệt', 'reject' => 'Từ chối'] as $decision => $label): ?><form method="post"><input type="hidden" name="_csrf" value="<?= sf_h(sf_csrf_token()) ?>"><input type="hidden" name="action" value="admin_review_workout"><input type="hidden" name="workout_id" value="<?= (int)$workout['id'] ?>"><input type="hidden" name="decision" value="<?= sf_h($decision) ?>"><input name="reason" minlength="5" maxlength="500" required placeholder="Lý do kiểm duyệt"><button class="btn secondary"><?= sf_h($label) ?></button></form><?php endforeach; ?></div><?php endif; ?></article><?php endforeach; ?>
+    <?php if (!$pendingWorkouts): ?><p class="empty-inline">Không có buổi tập cần kiểm duyệt.</p><?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php if ($canViewAppeals): ?>
+<section class="panel admin-page-panel">
+    <div class="section-heading"><div><h2>Kháng cáo chờ quyết định</h2><p class="muted">Phiếu cộng đồng chỉ để tham khảo. Cần <?= (int)$settings['appeal_minimum_votes'] ?> phiếu để hiển thị ý kiến.</p></div></div>
+    <?php foreach ($pendingAppeals as $appeal): $appealVoteTotal = (int)$appeal['yes_votes'] + (int)$appeal['no_votes']; ?><article class="admin-review-row"><div><b>#<?= (int)$appeal['id'] ?> · <?= sf_h($appeal['display_name']) ?> · <?= sf_h($appeal['week_start']) ?></b><small><?= sf_h($appeal['reason']) ?> · <?= (int)$appeal['yes_votes'] ?> đồng ý / <?= (int)$appeal['no_votes'] ?> không đồng ý · <?php if ($appealVoteTotal < (int)$settings['appeal_minimum_votes']): ?>Chưa đủ phiếu tham khảo<?php elseif ($appeal['yes_votes'] > $appeal['no_votes']): ?>Ý kiến nghiêng về chấp nhận<?php elseif ($appeal['no_votes'] > $appeal['yes_votes']): ?>Ý kiến nghiêng về từ chối<?php else: ?>Ý kiến đang hòa<?php endif; ?></small><?php if ($appeal['proof_path']): ?><a href="?appeal_media=<?= (int)$appeal['id'] ?>" target="_blank" rel="noopener">Xem ảnh minh chứng</a><?php endif; ?></div>
+        <?php if ($canReviewAppeals): ?><div class="admin-review-actions"><?php foreach (['accepted' => 'Chấp nhận', 'rejected' => 'Từ chối'] as $decision => $label): ?><form method="post"><input type="hidden" name="_csrf" value="<?= sf_h(sf_csrf_token()) ?>"><input type="hidden" name="action" value="admin_review_appeal"><input type="hidden" name="appeal_id" value="<?= (int)$appeal['id'] ?>"><input type="hidden" name="decision" value="<?= sf_h($decision) ?>"><input name="reason" minlength="5" maxlength="1000" required placeholder="Lý do quyết định"><button class="btn secondary"><?= sf_h($label) ?></button></form><?php endforeach; ?></div><?php endif; ?></article><?php endforeach; ?>
+    <?php if (!$pendingAppeals): ?><p class="empty-inline">Không có kháng cáo chờ xử lý.</p><?php endif; ?>
+</section>
+<?php endif; ?>
+
+<?php if ($canViewContentReports): ?>
+<section class="panel admin-page-panel">
+    <div class="section-heading"><div><h2>Báo cáo nội dung</h2><p class="muted">Bài viết và bình luận được báo cáo bởi thành viên.</p></div></div>
+    <?php foreach ($pendingReports as $report): ?><article class="admin-review-row"><div><b>#<?= (int)$report['id'] ?> · <?= sf_h($report['content_type']) ?> #<?= (int)$report['content_id'] ?> · <?= sf_h($report['reporter_name']) ?></b><small><?= sf_h($report['reason']) ?></small><small>Nội dung: <?= sf_h($report['reported_text'] ?? '[đã bị xóa]') ?></small><?php if ($canViewWorkouts && $report['related_workout_id']): ?><small><a href="?media=<?= (int)$report['related_workout_id'] ?>&amp;kind=checkin" target="_blank" rel="noopener">Ảnh check-in</a> · <a href="?media=<?= (int)$report['related_workout_id'] ?>&amp;kind=checkout" target="_blank" rel="noopener">Ảnh check-out</a></small><?php endif; ?></div>
+        <?php if ($canManageContentReports): ?><div class="admin-review-actions"><?php foreach (['resolved' => 'Đã xử lý', 'dismissed' => 'Bác báo cáo'] as $decision => $label): ?><form method="post"><input type="hidden" name="_csrf" value="<?= sf_h(sf_csrf_token()) ?>"><input type="hidden" name="action" value="admin_resolve_report"><input type="hidden" name="report_id" value="<?= (int)$report['id'] ?>"><input type="hidden" name="decision" value="<?= sf_h($decision) ?>"><input name="note" minlength="3" maxlength="500" required placeholder="Ghi chú xử lý"><button class="btn secondary"><?= sf_h($label) ?></button></form><?php endforeach; ?>
+            <?php if ($canModerateContent): ?><form method="post"><input type="hidden" name="_csrf" value="<?= sf_h(sf_csrf_token()) ?>"><input type="hidden" name="action" value="admin_remove_reported_content"><input type="hidden" name="report_id" value="<?= (int)$report['id'] ?>"><input name="note" minlength="3" maxlength="500" required placeholder="Lý do gỡ nội dung"><button class="btn danger-link">Gỡ nội dung</button></form><?php endif; ?></div><?php endif; ?>
+    </article><?php endforeach; ?>
+    <?php if (!$pendingReports): ?><p class="empty-inline">Không có báo cáo mới.</p><?php endif; ?>
+</section>
+<?php endif; ?>

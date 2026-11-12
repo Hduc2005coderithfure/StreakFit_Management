@@ -1,0 +1,7 @@
+<?php
+$settingLabels = ['minimum_workout_seconds'=>'Thời lượng buổi tập tối thiểu (giây)','checkout_timeout_hours'=>'Thời hạn check-out tối đa (giờ)','monthly_contribution'=>'Mức đóng quỹ hàng tháng','session_points'=>'Điểm mỗi buổi tập','miss_penalty'=>'Điểm phạt buổi thiếu','extra_session_points'=>'Điểm buổi tập thêm','streak_weekly_bonus'=>'Điểm thưởng chuỗi mỗi tuần','streak_bonus_cap_weeks'=>'Giới hạn tuần thưởng chuỗi','max_extra_sessions'=>'Số buổi thêm tối đa','appeal_monthly_limit'=>'Số kháng cáo tối đa mỗi tháng','appeal_minimum_votes'=>'Số phiếu tối thiểu để tham khảo'];
+?>
+<section class="panel admin-page-panel"><div class="section-heading"><div><h2>Cấu hình nghiệp vụ</h2><p class="muted">Các thông số áp dụng cho toàn bộ nhóm.</p></div></div>
+    <?php if ($canManageSettings): ?><form method="post" class="admin-settings-grid"><input type="hidden" name="_csrf" value="<?= sf_h(sf_csrf_token()) ?>"><input type="hidden" name="action" value="admin_update_settings"><?php foreach ($settingLabels as $key => $label): ?><label><?= sf_h($label) ?><input type="number" min="0" max="10000000" name="<?= sf_h($key) ?>" value="<?= (int)$settings[$key] ?>" required></label><?php endforeach; ?><button class="btn primary">Lưu cấu hình</button></form>
+    <?php else: ?><dl class="admin-settings-readonly"><?php foreach ($settingLabels as $key => $label): ?><div><dt><?= sf_h($label) ?></dt><dd><?= number_format((int)$settings[$key]) ?></dd></div><?php endforeach; ?></dl><?php endif; ?>
+</section>
