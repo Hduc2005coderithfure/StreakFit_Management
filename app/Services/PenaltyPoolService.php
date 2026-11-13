@@ -20,7 +20,7 @@ final class PenaltyPoolService
     public function join(int $fundId, int $userId): void
     {
         $this->withLockedFund($fundId, function (string $status) use ($fundId, $userId): void {
-            if ($status !== 'open') throw new DomainException('Quỹ tháng này đã đóng đăng ký.');
+            if (!in_array($status, ['open', 'voting'], true)) throw new DomainException('Quỹ tháng này đã chốt, không thể đăng ký.');
             $this->db->prepare("INSERT INTO fund_members (fund_id, user_id, opted_in) VALUES (?, ?, 1) ON DUPLICATE KEY UPDATE opted_in = 1")->execute([$fundId, $userId]);
         });
     }

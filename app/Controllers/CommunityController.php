@@ -32,11 +32,9 @@ final class CommunityController
                     if ($action==='bank_config' && $admin) {
                         $permissions->require($userId,'fund.manage');
                         $bankTransfers->saveConfiguration($userId,$request->all());
-                    } elseif ($action==='bank_confirm' && $admin) {
-                        $permissions->require($userId,'fund.manage');
-                        $bankTransfers->confirm($userId,(int)$request->input('request_id'),(string)$request->input('bank_reference'),(int)$request->input('received_amount'),(string)$request->input('statement_memo'));
                     } elseif ($action==='bank_create' && !$admin) {
                         $bankTransfers->create($userId,(int)$request->input('fund_id'));
+                        return Response::redirect(url('fund/payments#bankQr'));
                     } elseif ($action==='pay' && !$admin) {
                         $order=$payments->create($userId,(int)$request->input('fund_id'));
                         if ($order['status']==='paid') return Response::redirect(url('fund/payments'));

@@ -13,8 +13,9 @@ final class CheckInService
 {
     public function __construct(private readonly PDO $db, private readonly int $minimumSeconds = 1800, private readonly int $maximumOpenSeconds = 43200) {}
 
-    public function start(int $userId, string $imageData, string $timezone): int
+    public function start(int $userId, string $imageData, string $timezone, string $sport = 'gym'): int
     {
+        if (!isset(SportGroupService::SPORTS[$sport])) throw new DomainException('Môn thể thao không hợp lệ.');
         $local = new DateTimeImmutable('now', new DateTimeZone($timezone));
         $image = $this->storeCapture($imageData, $userId, 'checkin');
         $this->db->beginTransaction();
@@ -29,8 +30,8 @@ final class CheckInService
             $daily = $this->db->prepare("SELECT COUNT(*) FROM workouts WHERE user_id = ? AND workout_date = ? AND status = 'valid'");
             $daily->execute([$userId, $local->format('Y-m-d')]);
             if ((int)$daily->fetchColumn() > 0) throw new DomainException('Mỗi ngày chỉ ghi nhận một buổi tập hợp lệ.');
-            $stmt = $this->db->prepare('INSERT INTO workouts (user_id, week_start, workout_date, checked_in_at, checkin_image, status) VALUES (?, ?, ?, UTC_TIMESTAMP(), ?, \'in_progress\')');
-            $stmt->execute([$userId, $local->modify('monday this week')->format('Y-m-d'), $local->format('Y-m-d'), $image]);
+            $stmt = $this->db->prepare('INSERT INTO workouts (user_id, week_start, workout_date, checked_in_at, checkin_image, status, sport) VALUES (?, ?, ?, UTC_TIMESTAMP(), ?, \'in_progress\', ?)');
+            $stmt->execute([$userId, $local->modify('monday this week')->format('Y-m-d'), $local->format('Y-m-d'), $image, $sport]);
             $id = (int)$this->db->lastInsertId(); $this->db->commit(); return $id;
         } catch (\Throwable $error) { if ($this->db->inTransaction()) $this->db->rollBack(); $this->deleteCapture($image); throw $error; }
     }

@@ -44,7 +44,7 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
     <main class="admin-workspace" id="adminMain">
 <div class="admin-header-actions" style="padding:16px">
 <?php if ($permissionService->can($userId, 'groups.manage')): ?><a class="btn secondary" href="<?= e(url('admin/groups')) ?>">Nhóm thể thao</a><?php endif; ?>
-<?php if ($canViewFund): ?><a class="btn secondary" href="<?= e(url('admin/payments')) ?>">Đối soát chuyển khoản QR</a><?php endif; ?>
+<?php if ($canViewFund): ?><a class="btn secondary" href="<?= e(url('admin/payments')) ?>">Cấu hình tài khoản QR</a><?php endif; ?>
 </div>
         <header class="admin-workspace-header">
             <div><span class="admin-overline">STREAKFIT / ADMIN CENTER</span><h1 data-admin-title>Tổng quan cộng đồng</h1><p data-admin-description>Theo dõi và quản lý hoạt động của nhóm trong một nơi.</p></div>

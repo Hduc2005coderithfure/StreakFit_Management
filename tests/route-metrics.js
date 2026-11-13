@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict');
+const metrics=require('../public/assets/js/route-metrics.js');
+const p=[{lat:0,lng:0,t:0,accuracy:5},{lat:0,lng:.001,t:20000,accuracy:5}];
+assert.ok(Math.abs(metrics(p,'running').distance_meters-111.19)<.1);
+assert.equal(metrics(p,'running').tracked_seconds,20);
+p[1].segment_start=1;assert.equal(metrics(p,'running').distance_meters,0);
+p[1].segment_start=0;p[1].t=120000;assert.equal(metrics(p,'cycling').distance_meters,0);
+p[1].t=5000;assert.equal(metrics(p,'running').distance_meters,0);
+assert.ok(metrics(p,'cycling').distance_meters>111);
+p[1].accuracy=60;assert.equal(metrics(p,'cycling').distance_meters,0);
+p[1].accuracy=5;p[1].lng=.000001;assert.equal(metrics(p,'running').distance_meters,0);
+console.log('JavaScript route metrics: 8 passed.');

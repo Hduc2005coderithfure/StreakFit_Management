@@ -5,10 +5,15 @@ Môi trường: PHP 8.2 trên XAMPP, MariaDB local, database riêng streakfit_te
 | Bộ kiểm thử | Kết quả |
 |---|---|
 | tests/run.php: nghiệp vụ hiện có | 46 đạt, 0 lỗi |
-| tests/features.php: nhóm, GPS, check-in/check-out, thanh toán | 39 đạt, 0 lỗi |
+| tests/features.php: nhóm, GPS, check-in/check-out, thanh toán | 42 đạt, 0 lỗi |
 | tests/http.php: đăng ký/đăng nhập, trang User/Admin, biểu mẫu, GPS và QR ngân hàng | 30 đạt, 0 lỗi |
 | tests/seed_import.php: schema, dữ liệu mẫu và migrations | Đạt |
 | PHP lint và JavaScript route.js syntax | Đạt |
+| tests/route-metrics.php: khoảng cách chuẩn, dừng, mất tín hiệu, tốc độ bất thường, nhiễu GPS | 7 đạt |
+| tests/route-metrics.js: tính quãng đường trên giao diện | 8 đạt |
+| tests/route-browser.js: mô phỏng cấp quyền, GPS, lưu máy chủ, dừng/tiếp tục | 9 đạt |
+
+Quãng đường và thời gian GPS được lưu ở bảng workouts, đi kèm môn thể thao. Đã kiểm tra tọa độ mẫu cách nhau khoảng 111,19 m; kiểm tra ghi kilomet vào database và đặt lại về 0 khi xóa GPS. Mô phỏng trình duyệt không thay thế thử chạy ngoài trời.
 
 Các lỗi đã sửa trong quá trình rà soát: bộ test nhập schema cũ thiếu migrations; lời gọi test Admin thiếu tham số phân quyền; fixture render Admin không khớp view hiện tại (thay bằng kiểm thử HTTP); tài khoản bị khóa còn phiên đăng nhập có thể gửi một số POST; lịch sử buổi tập thiếu ID cần cho liên kết GPS.
 

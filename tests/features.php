@@ -29,6 +29,9 @@ $gps=new App\Services\RouteTrackingService($db);
 $p=['lat'=>10.77,'lng'=>106.7,'accuracy'=>10,'t'=>(int)(microtime(true)*1000)-15000];
 $gps->append($owner,$wid,[$p]);$gps->append($owner,$wid,[$p]);
 $assert(count($gps->read($owner,$wid)['points'])===1,'GPS stores points without duplicates');
+$gps->append($owner,$wid,[array_replace($p,['lng'=>106.7005,'t'=>$p['t']+10000])]);
+$stored=$gps->read($owner,$wid)['workout'];
+$assert((float)$stored['distance_meters']>50&&(float)$stored['distance_meters']<60&&(int)$stored['tracked_seconds']===10,'GPS distance and tracked time persist in database');
 $reject(fn()=>$gps->read($other,$wid),'other member cannot read private GPS');
 $reject(fn()=>$gps->append($other,$wid,[$p]),'other member cannot write GPS');
 $reject(fn()=>$gps->append($owner,$wid,[array_replace($p,['lat'=>91])]),'invalid coordinate rejected');
@@ -37,6 +40,7 @@ $reject(fn()=>$gps->append($owner,$wid,[array_replace($p,['t'=>1])]),'GPS before
 $db->prepare("UPDATE workouts SET status='abandoned',checked_out_at=UTC_TIMESTAMP() WHERE id=?")->execute([$wid]);
 $reject(fn()=>$gps->append($owner,$wid,[$p]),'finished workout cannot receive GPS');
 $gps->delete($owner,$wid);$assert(count($gps->read($owner,$wid)['points'])===0,'owner can delete GPS');
+$assert((float)$gps->read($owner,$wid)['workout']['distance_meters']===0.0,'deleting GPS resets stored distance');
 
 // Gateway double never contacts a bank; real signature verification remains enabled.
 $cfg=['payos_client_id'=>'test','payos_api_key'=>'test','payos_checksum_key'=>'test-secret','url'=>'https://example.test'];
@@ -76,7 +80,8 @@ $assert($s->fetchColumn()==='unpaid','mismatched transfer does not mark membersh
 // Check-out actually persists 30+ minute result, using a tiny valid JPEG fixture.
 $image='data:image/jpeg;base64,'.base64_encode(file_get_contents(__DIR__.'/fixtures/capture.jpg'));
 $tester=$create();$checkin=new App\Services\CheckInService($db);
-$w=$checkin->start($tester,$image,sf_config()['timezone']);
+$w=$checkin->start($tester,$image,sf_config()['timezone'],'cycling');
+$assert($db->query('SELECT sport FROM workouts WHERE id='.$w)->fetchColumn()==='cycling','check-in persists chosen cycling sport');
 $reject(fn()=>$checkin->start($tester,$image,sf_config()['timezone']),'second simultaneous check-in rejected');
 $db->prepare('UPDATE workouts SET checked_in_at=DATE_SUB(UTC_TIMESTAMP(),INTERVAL 1801 SECOND) WHERE id=?')->execute([$w]);
 $done=$checkin->finish($tester,$image,sf_config()['timezone'],'30 minute test',$w);

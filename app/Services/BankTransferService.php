@@ -78,27 +78,4 @@ final class BankTransferService
             'accountName'=>$request['account_name']
         ],'','&',PHP_QUERY_RFC3986);
     }
-    public function confirm(int $adminId,int $id,string $bankReference,int $receivedAmount,string $statementMemo): void
-    {
-        $bankReference=trim($bankReference);
-        if (!preg_match('/^[A-Za-z0-9._-]{6,100}$/',$bankReference)) throw new DomainException('Nhập mã giao dịch ngân hàng từ sao kê (6–100 ký tự).');
-        $this->db->beginTransaction();
-        try {
-            $s=$this->db->prepare('SELECT fund_id,user_id FROM bank_transfer_requests WHERE id=?');$s->execute([$id]);$ref=$s->fetch();
-            if(!$ref)throw new DomainException('Không tìm thấy yêu cầu nộp quỹ.');
-            $s=$this->db->prepare('SELECT id FROM monthly_funds WHERE id=? FOR UPDATE');$s->execute([$ref['fund_id']]);$s->fetch();
-            $s=$this->db->prepare('SELECT * FROM fund_members WHERE fund_id=? AND user_id=? FOR UPDATE');$s->execute([$ref['fund_id'],$ref['user_id']]);$member=$s->fetch();
-            $s=$this->db->prepare('SELECT * FROM bank_transfer_requests WHERE id=? FOR UPDATE');$s->execute([$id]);$request=$s->fetch();
-            if ($request['status']!=='pending' || !$member || $member['contribution_status']==='paid') throw new DomainException('Khoản này đã được xử lý hoặc thành viên đã đóng quỹ.');
-            if ($receivedAmount!==(int)$request['amount']) throw new DomainException('Số tiền nhận không khớp với số tiền yêu cầu. Cần đối soát thủ công.');
-            $normalizedMemo=preg_replace('/[^A-Z0-9]/','',strtoupper($statementMemo));
-            if (!str_contains((string)$normalizedMemo,$request['transfer_memo'])) throw new DomainException('Nội dung trong sao kê không chứa mã chuyển khoản của thành viên.');
-            $this->db->prepare("INSERT INTO fund_transactions (fund_id,user_id,transaction_type,amount,status,note,reference_key) VALUES (?,?,'contribution',?,'paid',?,?)")->execute([$request['fund_id'],$request['user_id'],$request['amount'],'Chuyển khoản ngân hàng '.$bankReference,'bank:'.$id]);
-            $this->db->prepare("UPDATE fund_members SET contribution_status='paid',opted_in=1 WHERE fund_id=? AND user_id=?")->execute([$request['fund_id'],$request['user_id']]);
-            $this->db->prepare("UPDATE bank_transfer_requests SET status='paid',bank_reference=?,verified_by=?,verified_at=UTC_TIMESTAMP() WHERE id=?")->execute([$bankReference,$adminId,$id]);
-            $this->db->prepare("INSERT INTO notifications (user_id,type,title,body) VALUES (?,'fund_payment','Đã xác nhận nộp quỹ',?)")->execute([$request['user_id'],'Đã nhận '.number_format((int)$request['amount']).'đ, mã '.$request['transfer_memo']]);
-            (new AuditLogService($this->db))->record($adminId,'bank_transfer_verified','bank_transfer_request',$id,['reference'=>$bankReference,'amount'=>$receivedAmount]);
-            $this->db->commit();
-        } catch (\Throwable $e){if($this->db->inTransaction())$this->db->rollBack();throw $e;}
-    }
 }

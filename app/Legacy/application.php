@@ -289,7 +289,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'start_workout') {
             $service = new \App\Services\CheckInService($db, sf_settings()['minimum_workout_seconds'], sf_settings()['checkout_timeout_hours'] * 3600);
-            $service->start($userId, (string)($_POST['image_data'] ?? ''), $config['timezone']);
+            $service->start($userId, (string)($_POST['image_data'] ?? ''), $config['timezone'], (string)($_POST['sport'] ?? 'gym'));
             sf_notify_others($db, $userId, 'workout', 'Một thành viên vừa check-in', 'Có thành viên bắt đầu buổi tập. Gửi lời động viên nhé!');
             sf_flash('Check-in thành công. Thời gian bắt đầu được ghi nhận từ máy chủ.');
             sf_redirect('checkin');
@@ -412,8 +412,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($action === 'fund_mark_paid') {
                 $permissionService->require($userId, 'fund.manage');
                 $memberId = (int)($_POST['member_id'] ?? 0);
-                (new \App\Services\AdminService($db))->recordFundTransaction($userId, $fundId, $memberId, 'contribution', (int)$fund['contribution_amount'], 'Quản trị viên xác nhận đã đóng');
-                sf_flash('Đã cập nhật sổ quỹ tháng.');
+                (new \App\Services\AdminService($db))->recordFundTransaction($userId, $fundId, $memberId, 'contribution', (int)$fund['contribution_amount'], 'Admin xác nhận tham gia và đóng quỹ');
+                sf_flash('Đã xác nhận thành viên tham gia và ghi nhận đã đóng quỹ.');
                 sf_redirect((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile');
             }
 
@@ -565,7 +565,7 @@ if (!in_array($period, ['week','month','all'], true)) {
 
 $workouts = [];
 if ($tab === 'history') {
-    $historyStmt = $db->prepare('SELECT id, workout_date, status, duration_seconds FROM workouts WHERE user_id = ? ORDER BY workout_date DESC, id DESC LIMIT 100');
+    $historyStmt = $db->prepare('SELECT id, workout_date, status, duration_seconds, sport, distance_meters, tracked_seconds FROM workouts WHERE user_id = ? ORDER BY workout_date DESC, id DESC LIMIT 100');
     $historyStmt->execute([$userId]);
     $workouts = $historyStmt->fetchAll();
 }

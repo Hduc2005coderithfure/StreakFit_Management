@@ -151,15 +151,17 @@ final class AdminService
     public function recordFundTransaction(int $adminId, int $fundId, int $userId, string $type, int $amount, string $note): void
     {
         if (!in_array($type, ['contribution', 'penalty', 'reward'], true) || $amount < 1 || $amount > 100000000 || mb_strlen(trim($note)) < 3 || mb_strlen($note) > 255) throw new DomainException('Giao dịch cần loại, số tiền hợp lệ và ghi chú từ 3 đến 255 ký tự.');
+        $receipt=null;
+        $bankRequestId=null;
         $this->db->beginTransaction();
         try {
             $member = $this->db->prepare('SELECT id FROM fund_members WHERE fund_id = ? AND user_id = ? FOR UPDATE');
             $member->execute([$fundId, $userId]);
             if (!$member->fetchColumn()) throw new DomainException('Thành viên chưa tham gia quỹ tháng này.');
             if ($type === 'contribution') {
-                $bankRequest=$this->db->prepare("SELECT id FROM bank_transfer_requests WHERE fund_id=? AND user_id=? AND status='pending' LIMIT 1");
+                $bankRequest=$this->db->prepare("SELECT id FROM bank_transfer_requests WHERE fund_id=? AND user_id=? AND status='pending' LIMIT 1 FOR UPDATE");
                 $bankRequest->execute([$fundId,$userId]);
-                if ($bankRequest->fetchColumn()) throw new DomainException('Thành viên có mã QR đang chờ thanh toán. Xác nhận trong trang Đối soát chuyển khoản.');
+                $bankRequestId=$bankRequest->fetchColumn() ?: null;
                 $paid = $this->db->prepare("SELECT contribution_status, opted_in FROM fund_members WHERE fund_id = ? AND user_id = ?");
                 $paid->execute([$fundId, $userId]);
                 $membership = $paid->fetch();
@@ -167,12 +169,24 @@ final class AdminService
                 if ($membership['contribution_status'] === 'paid') throw new DomainException('Khoản đóng góp này đã được xác nhận.');
             }
             $this->db->prepare('INSERT INTO fund_transactions (fund_id, user_id, transaction_type, amount, status, note) VALUES (?, ?, ?, ?, ?, ?)')->execute([$fundId, $userId, $type, $amount, $type === 'contribution' ? 'paid' : 'recorded', trim($note)]);
-            if ($type === 'contribution') $this->db->prepare("UPDATE fund_members SET contribution_status = 'paid' WHERE fund_id = ? AND user_id = ?")->execute([$fundId, $userId]);
+            if ($type === 'contribution') {
+                $this->db->prepare("UPDATE fund_members SET contribution_status = 'paid', opted_in = 1 WHERE fund_id = ? AND user_id = ?")->execute([$fundId, $userId]);
+                if ($bankRequestId !== null) $this->db->prepare("UPDATE bank_transfer_requests SET status='paid', verified_by=?, verified_at=UTC_TIMESTAMP() WHERE id=? AND status='pending'")->execute([$adminId, $bankRequestId]);
+                $this->db->prepare("INSERT INTO notifications (user_id,type,title,body) VALUES (?,'fund_payment','Đã xác nhận tham gia quỹ',?)")->execute([$userId, 'Admin đã xác nhận bạn tham gia và ghi nhận khoản đóng quỹ ' . number_format($amount) . 'đ.']);
+                $userQuery=$this->db->prepare('SELECT email,display_name FROM users WHERE id=?');
+                $userQuery->execute([$userId]);
+                $receipt=$userQuery->fetch() ?: null;
+            }
             (new AuditLogService($this->db))->record($adminId, 'fund_transaction_recorded', 'fund', $fundId, ['user_id' => $userId, 'type' => $type, 'amount' => $amount]);
             $this->db->commit();
         } catch (\Throwable $error) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             throw $error;
+        }
+        if ($type === 'contribution' && $receipt) {
+            $subject='StreakFit: Đã xác nhận tham gia quỹ';
+            $body="Xin chào {$receipt['display_name']},\n\nAdmin đã xác nhận bạn tham gia và hoàn tất khoản đóng quỹ ".number_format($amount)."đ.\n\nCảm ơn bạn!";
+            @mail((string)$receipt['email'],$subject,$body,"Content-Type: text/plain; charset=UTF-8\r\n");
         }
     }
 
