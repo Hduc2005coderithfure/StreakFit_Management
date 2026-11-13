@@ -4,8 +4,8 @@ $sports=\App\Services\SportGroupService::SPORTS;
 $states=['creating'=>'Đang tạo','pending'=>'Chờ thanh toán','paid'=>'Đã nhận tiền','cancelled'=>'Đã hủy','expired'=>'Hết hạn','review'=>'Cần đối soát'];
 $flash=$_SESSION['sf_flash']??null;unset($_SESSION['sf_flash']);
 ?>
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($titles[$page]) ?> · StreakFit</title><link rel="stylesheet" href="<?= e(asset('css/streakfit.css')) ?>"><link rel="stylesheet" href="<?= e(asset('css/community.css')) ?>"></head>
-<body><div class="community-shell"><header class="topbar"><a class="brand" href="<?= e(url('dashboard')) ?>"><span>Streak<i>Fit</i></span><small><?= e($user['display_name']) ?></small></a><a href="<?= e(url($admin?'admin':'profile')) ?>">← <?= $admin?'Admin':'Cá nhân' ?></a></header><main class="page-content">
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($titles[$page]) ?> · StreakFit</title><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/community.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit-future.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit-motion.css')) ?>"><?php if (!$admin): ?><link rel="stylesheet" href="<?= e(sf_asset_version('css/arena-atmosphere.css')) ?>"><?php endif; ?></head>
+<body class="sf-future sf-community"><div class="community-shell"><header class="topbar"><a class="brand" href="<?= e(url('dashboard')) ?>"><span>Streak<i>Fit</i></span><small><?= e($user['display_name']) ?></small></a><a href="<?= e(url($admin?'admin':'profile')) ?>">← <?= $admin?'Admin':'Cá nhân' ?></a></header><?php if (!$admin) require APP_ROOT . '/app/Views/components/arena-atmosphere.php'; ?><main class="page-content">
 <nav class="sub-tabs"><a href="<?= e(url('groups')) ?>">Nhóm thể thao</a><a href="<?= e(url('workouts')) ?>">Check-in</a><a href="<?= e(url('fund/payments')) ?>">Nộp quỹ</a></nav>
 <div class="page-intro"><h1><?= e($titles[$page]) ?></h1></div>
 <?php if($error): ?><p class="alert error" role="alert"><?= e($error) ?></p><?php endif; ?>
@@ -78,7 +78,7 @@ $flash=$_SESSION['sf_flash']??null;unset($_SESSION['sf_flash']);
 <button class="text-link danger-link" id="gpsDelete">Xóa dữ liệu GPS buổi này</button><?php endif; ?>
 <div id="routeMap" class="route-map"><?php if(!app_config()['google_maps_key']): ?><p>Bản đồ đang chờ cấu hình Google Maps. Bạn vẫn có thể lưu GPS.</p><?php endif; ?></div><a class="btn secondary" href="<?= e(url('workouts')) ?>">Về check-in / check-out</a></section>
 <script id="routeData" type="application/json"><?= json_encode(['id'=>(int)$route['workout']['id'],'owner'=>(int)$route['workout']['user_id']===$userId,'points'=>$route['points'],'csrf'=>sf_csrf_token(),'endpoint'=>url('api/workout-route')],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
-<script src="<?= e(asset('js/route.js')) ?>"></script>
+<script src="<?= e(sf_asset_version('js/route.js')) ?>"></script>
 <?php if(app_config()['google_maps_key']): ?><script async src="https://maps.googleapis.com/maps/api/js?key=<?= e(rawurlencode(app_config()['google_maps_key'])) ?>&amp;callback=initStreakFitRoute&amp;loading=async"></script><?php endif; ?>
 <?php endif; ?>
-</main></div></body></html>
+</main></div><script src="<?= e(sf_asset_version('js/streakfit-future.js')) ?>" defer></script><script src="<?= e(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script><?php if (!$admin): ?><script src="<?= e(sf_asset_version('js/arena-atmosphere.js')) ?>" defer></script><?php endif; ?></body></html>

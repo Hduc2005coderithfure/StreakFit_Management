@@ -30,6 +30,8 @@ return [
     'workout_min_seconds' => 1800,
     'monthly_contribution' => 20000,
     'google_maps_key' => $read('GOOGLE_MAPS_API_KEY'),
+    'gemini_api_key' => $read('GEMINI_API_KEY'),
+    'gemini_model' => $read('GEMINI_MODEL', 'gemini-3.8-flash'),
     'payos_client_id' => $read('PAYOS_CLIENT_ID'),
     'payos_api_key' => $read('PAYOS_API_KEY'),
     'payos_checksum_key' => $read('PAYOS_CHECKSUM_KEY'),

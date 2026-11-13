@@ -11,11 +11,13 @@ require APP_ROOT.'/app/Helpers/functions.php';
 $db=sf_db();$admin=(int)$db->query("SELECT id FROM users WHERE email='admin@test.local'")->fetchColumn();
 (new App\Services\AdminPermissionService($db))->grantAllToUser($admin);
 $port=18763;$base='http://127.0.0.1:'.$port;
-$env=getenv();$env['APP_URL']=$base;$env['STREAKFIT_DB_DATABASE']=$name;
+$env=getenv();$env['APP_URL']=$base;$env['STREAKFIT_DB_DATABASE']=$name;$env['GEMINI_API_KEY']='';
 $log=tempnam(sys_get_temp_dir(),'sf-http');$cookie=tempnam(sys_get_temp_dir(),'sf-cookie');
-$proc=proc_open([PHP_BINARY,'-S','127.0.0.1:'.$port,'-t',APP_ROOT.'/public',APP_ROOT.'/public/index.php'],[['pipe','r'],['file',$log,'a'],['file',$log,'a']],$pipes,APP_ROOT,$env);
-if(!is_resource($proc))exit('Cannot start test HTTP server');
-register_shutdown_function(static function()use($proc,$cookie,$log){proc_terminate($proc);proc_close($proc);@unlink($cookie);@unlink($log);});
+$sessionDir=APP_ROOT.'/storage/.sf-http-session-'.bin2hex(random_bytes(6));
+if (!@mkdir($sessionDir,0700) || !is_writable($sessionDir)) exit('Cannot create writable test session directory');
+$proc=proc_open([PHP_BINARY,'-d','session.save_path='.$sessionDir,'-S','127.0.0.1:'.$port,'-t',APP_ROOT.'/public',APP_ROOT.'/public/index.php'],[['pipe','r'],['file',$log,'a'],['file',$log,'a']],$pipes,APP_ROOT,$env);
+if(!is_resource($proc)){@rmdir($sessionDir);exit('Cannot start test HTTP server');}
+register_shutdown_function(static function()use($proc,$cookie,$log,$sessionDir){proc_terminate($proc);proc_close($proc);@unlink($cookie);@unlink($log);foreach(glob($sessionDir.DIRECTORY_SEPARATOR.'sess_*')?:[] as $sessionFile)@unlink($sessionFile);@rmdir($sessionDir);});
 usleep(500000);
 $request=static function($path,$body=null)use($base,$cookie){
  $ch=curl_init($base.$path);curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_COOKIEFILE=>$cookie,CURLOPT_COOKIEJAR=>$cookie,CURLOPT_TIMEOUT=>20]);
@@ -25,11 +27,17 @@ $request=static function($path,$body=null)use($base,$cookie){
 $n=0;$assert=static function($ok,$msg)use(&$n){if(!$ok)throw new RuntimeException('FAIL: '.$msg);echo "PASS: $msg\n";$n++;};
 $csrf=static function($html){preg_match('/name="_csrf" value="([^"]+)"/',$html,$m);return $m[1]??'';};
 [$code,$html]=$request('/login');$assert($code===200,'login page loads');
+$token=$csrf($html);
+[$code]=$request('/api/coach',['_csrf'=>$token,'question'=>'Tôi nên tập mấy buổi?']);$assert($code===401,'coach requires login');
 $token=$csrf($html);$email='http'.bin2hex(random_bytes(5)).'@test.local';
 [$code]=$request('/register',['_csrf'=>$token,'action'=>'register','display_name'=>'HTTP Tester','email'=>$email,'password'=>'TestPass123!']);$assert($code===303,'register creates account');
 foreach(['/dashboard','/workouts','/workouts/history','/leaderboard','/notifications','/profile?section=fund','/groups','/fund/payments'] as $path){
  [$code,$html]=$request($path);$assert($code===200&&!preg_match('/Warning:|Fatal error:|Uncaught /',$html),'member page '.$path);
 }
+[$code,$html]=$request('/profile');$token=$csrf($html);
+[$code]=$request('/api/coach',['_csrf'=>'bad','question'=>'Mục tiêu tuần này?']);$assert($code===419,'coach rejects invalid CSRF');
+[$code,$body]=$request('/api/coach',['_csrf'=>$token,'question'=>'Mục tiêu tuần này?']);
+$coach=json_decode($body,true);$assert($code===200&&($coach['mode']??'')==='local'&&str_contains((string)($coach['answer']??''),'Tuần này'),'coach uses personal weekly progress without API key');
 [$code]=$request('/admin/payments');$assert($code===403,'member denied payment administration');
 [$code,$html]=$request('/groups');$token=$csrf($html);
 [$code]=$request('/groups',['_csrf'=>'bad','action'=>'join','group_id'=>1]);$assert($code===419,'CSRF rejects invalid token');

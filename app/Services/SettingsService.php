@@ -7,6 +7,20 @@ use PDO;
 
 final class SettingsService
 {
+    public const RANGES = [
+        'minimum_workout_seconds' => [600, 14400],
+        'checkout_timeout_hours' => [1, 72],
+        'monthly_contribution' => [0, 10000000],
+        'session_points' => [0, 1000],
+        'miss_penalty' => [0, 1000],
+        'extra_session_points' => [0, 1000],
+        'streak_weekly_bonus' => [0, 1000],
+        'streak_bonus_cap_weeks' => [1, 52],
+        'max_extra_sessions' => [0, 7],
+        'appeal_monthly_limit' => [1, 20],
+        'appeal_minimum_votes' => [1, 100],
+    ];
+
     private const DEFAULTS = [
         'minimum_workout_seconds' => 1800,
         'checkout_timeout_hours' => 12,
@@ -40,21 +54,8 @@ final class SettingsService
 
     public function save(array $values, int $adminId): void
     {
-        $ranges = [
-            'minimum_workout_seconds' => [600, 14400],
-            'checkout_timeout_hours' => [1, 72],
-            'monthly_contribution' => [0, 10000000],
-            'session_points' => [0, 1000],
-            'miss_penalty' => [0, 1000],
-            'extra_session_points' => [0, 1000],
-            'streak_weekly_bonus' => [0, 1000],
-            'streak_bonus_cap_weeks' => [1, 52],
-            'max_extra_sessions' => [0, 7],
-            'appeal_monthly_limit' => [1, 20],
-            'appeal_minimum_votes' => [1, 100],
-        ];
         $validated = [];
-        foreach ($ranges as $key => [$min, $max]) {
+        foreach (self::RANGES as $key => [$min, $max]) {
             $value = filter_var($values[$key] ?? null, FILTER_VALIDATE_INT);
             if ($value === false || $value < $min || $value > $max) {
                 throw new \DomainException('Giá trị cấu hình ' . $key . ' nằm ngoài giới hạn cho phép.');

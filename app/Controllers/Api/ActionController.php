@@ -48,9 +48,15 @@ final class ActionController
         $old = $this->db->prepare('SELECT reaction FROM workout_reactions WHERE workout_id = ? AND user_id = ?'); $old->execute([$workoutId, $userId]);
         if ($old->fetchColumn() === $reaction) {
             $this->db->prepare('DELETE FROM workout_reactions WHERE workout_id = ? AND user_id = ?')->execute([$workoutId, $userId]);
-            return Response::json(['ok' => true, 'reaction' => null]);
+            return $this->reactionResult($workoutId, null);
         }
         $stmt = $this->db->prepare('INSERT INTO workout_reactions (workout_id, user_id, reaction) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reaction = VALUES(reaction)');
-        $stmt->execute([$workoutId, $userId, $reaction]); return Response::json(['ok' => true, 'reaction' => $reaction]);
+        $stmt->execute([$workoutId, $userId, $reaction]); return $this->reactionResult($workoutId, $reaction);
+    }
+    private function reactionResult(int $workoutId, ?string $reaction): Response
+    {
+        $count = $this->db->prepare('SELECT COUNT(*) FROM workout_reactions WHERE workout_id = ?');
+        $count->execute([$workoutId]);
+        return Response::json(['ok' => true, 'reaction' => $reaction, 'reaction_count' => (int)$count->fetchColumn()]);
     }
 }

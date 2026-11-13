@@ -1,4 +1,20 @@
 (() => {
+  // Keep the reader at the same post after a reaction or comment redirects to the feed.
+  const feedScrollKey = 'streakfit:feed-scroll';
+  if (document.body.dataset.tab === 'feed') {
+    try {
+      const saved = sessionStorage.getItem(feedScrollKey);
+      if (saved !== null) {
+        sessionStorage.removeItem(feedScrollKey);
+        requestAnimationFrame(() => window.scrollTo({ top: Number(saved) || 0, behavior: 'auto' }));
+      }
+    } catch (_) {}
+    document.querySelectorAll('.reaction-buttons form, .comment-form').forEach(form => {
+      form.addEventListener('submit', () => {
+        try { sessionStorage.setItem(feedScrollKey, String(window.scrollY)); } catch (_) {}
+      });
+    });
+  }
   const drawer = document.getElementById('accountDrawer');
   const drawerTrigger = document.querySelector('.account-menu-trigger');
   const drawerPanel = drawer?.querySelector('.account-drawer');
@@ -147,6 +163,7 @@
   const cameraFrame = document.querySelector('.camera-frame');
   const checkinCard = document.querySelector('[data-checkin-start]');
   const minimumSeconds = Number(checkinCard?.dataset.minimumSeconds || 1800);
+  const minimumMinutes = Math.ceil(minimumSeconds / 60);
   const timezone = document.body.dataset.timezone || 'Asia/Ho_Chi_Minh';
   const video = document.getElementById('cameraVideo');
   const placeholder = document.getElementById('cameraPlaceholder');
@@ -237,7 +254,7 @@
       timer.textContent = `${hours}:${minutes}:${remainder}`;
       const ready = seconds >= minimumSeconds;
       if (captureButton) captureButton.disabled = !ready || !stream;
-      if (hint) hint.textContent = ready ? 'Đã đủ 30 phút · Có thể check-out sau khi mở camera.' : `Cần thêm ${Math.ceil((minimumSeconds - seconds) / 60)} phút để đủ điều kiện.`;
+      if (hint) hint.textContent = ready ? `Đã đủ ${minimumMinutes} phút · Có thể check-out sau khi mở camera.` : `Cần thêm ${Math.ceil((minimumSeconds - seconds) / 60)} phút để đủ điều kiện.`;
     };
     refreshTimer();
     window.setInterval(refreshTimer, 1000);
@@ -246,19 +263,33 @@
   window.addEventListener('pagehide', () => stream?.getTracks().forEach(track => track.stop()));
 
   const assistantForm = document.getElementById('assistantForm');
-  assistantForm?.addEventListener('submit', event => {
+  assistantForm?.addEventListener('submit', async event => {
     event.preventDefault();
     const input = document.getElementById('assistantQuestion');
     const answer = document.getElementById('assistantAnswer');
-    const question = input.value.trim().toLowerCase();
+    const mode = document.getElementById('assistantMode');
+    const button = assistantForm.querySelector('button[type="submit"]');
+    const question = input.value.trim();
     if (!question) return;
-    if (question.includes('bmi') || question.includes('cân nặng')) {
-      answer.textContent = 'BMI là chỉ số tham khảo dựa trên cân nặng và chiều cao. Xem kết quả trong hồ sơ và trao đổi với chuyên gia nếu cần đánh giá sức khỏe.';
-    } else if (question.includes('nghỉ') || question.includes('đau')) {
-      answer.textContent = 'Hãy nghỉ nếu cơ thể đau hoặc mệt bất thường. Nếu triệu chứng kéo dài, hãy hỏi chuyên gia y tế.';
-    } else {
-      answer.textContent = 'Hãy chọn lịch tập có thể duy trì, tăng khối lượng từ từ và ưu tiên kỹ thuật an toàn. Đây là trợ lý demo, không phải tư vấn y tế.';
+    button.disabled = true;
+    answer.textContent = 'Đang xem tiến độ của bạn…';
+    try {
+      const payload = new URLSearchParams(new FormData(assistantForm));
+      payload.set('question', question);
+      const response = await fetch(assistantForm.dataset.endpoint, {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: payload.toString(),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Không thể trả lời lúc này.');
+      answer.textContent = result.answer;
+      mode.textContent = result.mode === 'gemini' ? 'Câu trả lời do Gemini tạo từ tiến độ tuần của bạn.' : 'Gợi ý từ dữ liệu StreakFit.';
+      input.value = '';
+    } catch (error) {
+      answer.textContent = error.message || 'Không thể kết nối. Hãy thử lại.';
+    } finally {
+      button.disabled = false;
     }
-    input.value = '';
   });
 })();

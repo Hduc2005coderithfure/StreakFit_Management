@@ -22,6 +22,17 @@ function url(string $path = '/'): string
 }
 
 function asset(string $path): string { return url('assets/' . ltrim($path, '/')); }
+// Content-based URL revision: prevents stale CSS/JS after copying a release.
+function sf_asset_version(string $path): string
+{
+    static $versions = [];
+    $path = ltrim($path, '/');
+    if (!isset($versions[$path])) {
+        $file = dirname(__DIR__, 2) . '/public/assets/' . $path;
+        $versions[$path] = is_file($file) ? substr((string)hash_file('sha256', $file), 0, 12) : '1';
+    }
+    return asset($path) . '?v=' . $versions[$path];
+}
 function format_score(int|float|string $score): string { return number_format((float)$score, 0, ',', '.'); }
 function e(mixed $value): string { return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); }
 function csrf_field(): string { return '<input type="hidden" name="_csrf" value="' . sf_h(sf_csrf_token()) . '">'; }
@@ -81,6 +92,11 @@ function sf_member_week_target(PDO $db, int $userId, string $weekStart, int $wee
     $stmt = $db->prepare('SELECT MIN(workout_date) FROM workouts WHERE user_id = ?');
     $stmt->execute([$userId]);
     $firstCheckin = $stmt->fetchColumn();
+    return sf_week_target_from_first_checkin($weekStart, $weeklyTarget, $firstCheckin ? (string)$firstCheckin : null);
+}
+
+function sf_week_target_from_first_checkin(string $weekStart, int $weeklyTarget, ?string $firstCheckin): int
+{
     if (!$firstCheckin) return 0;
     $weekEnd = (new DateTimeImmutable($weekStart))->modify('+7 days')->format('Y-m-d');
     if ((string)$firstCheckin >= $weekEnd) return 0;
@@ -102,18 +118,23 @@ function sf_require_admin(PDO $db, int $userId): void
     $stmt->execute([$userId]);
     if (!$stmt->fetchColumn()) throw new DomainException('Thao tác này chỉ dành cho quản trị viên đang hoạt động.');
 }
+function sf_rank_catalog(): array
+{
+    return [
+        ['name' => 'Đồng', 'min' => 0, 'next' => 301, 'symbol' => '🥉', 'slug' => 'dong'],
+        ['name' => 'Bạc', 'min' => 301, 'next' => 1001, 'symbol' => '🥈', 'slug' => 'bac'],
+        ['name' => 'Vàng', 'min' => 1001, 'next' => 3001, 'symbol' => '🥇', 'slug' => 'vang'],
+        ['name' => 'Bạch Kim', 'min' => 3001, 'next' => 7001, 'symbol' => '💠', 'slug' => 'bach-kim'],
+        ['name' => 'Kim Cương', 'min' => 7001, 'next' => 12001, 'symbol' => '💎', 'slug' => 'kim-cuong'],
+        ['name' => 'Tinh Anh', 'min' => 12001, 'next' => 19001, 'symbol' => '🔮', 'slug' => 'tinh-anh'],
+        ['name' => 'Cao Thủ', 'min' => 19001, 'next' => 30001, 'symbol' => '🔥', 'slug' => 'cao-thu'],
+        ['name' => 'Chiến Tướng', 'min' => 30001, 'next' => null, 'symbol' => '👑', 'slug' => 'chien-tuong'],
+    ];
+}
+
 function sf_rank(int $points): array
 {
-    $ranks = [
-        ['name' => 'Đồng', 'min' => 0, 'next' => 301, 'symbol' => '🥉'],
-        ['name' => 'Bạc', 'min' => 301, 'next' => 1001, 'symbol' => '🥈'],
-        ['name' => 'Vàng', 'min' => 1001, 'next' => 3001, 'symbol' => '🥇'],
-        ['name' => 'Bạch Kim', 'min' => 3001, 'next' => 7001, 'symbol' => '💠'],
-        ['name' => 'Kim Cương', 'min' => 7001, 'next' => 12001, 'symbol' => '💎'],
-        ['name' => 'Tinh Anh', 'min' => 12001, 'next' => 19001, 'symbol' => '🔮'],
-        ['name' => 'Cao Thủ', 'min' => 19001, 'next' => 30001, 'symbol' => '🔥'],
-        ['name' => 'Chiến Tướng', 'min' => 30001, 'next' => null, 'symbol' => '👑'],
-    ];
+    $ranks = sf_rank_catalog();
     $points = max(0, $points);
     for ($i = count($ranks) - 1; $i >= 0; $i--) {
         if ($points >= $ranks[$i]['min']) {
@@ -121,6 +142,14 @@ function sf_rank(int $points): array
         }
     }
     return $ranks[0];
+}
+
+function sf_rank_emblem(array $rank, string $class = 'rank-emblem'): string
+{
+    $slug = (string)($rank['slug'] ?? 'dong');
+    $allowed = array_column(sf_rank_catalog(), 'slug');
+    if (!in_array($slug, $allowed, true)) $slug = 'dong';
+    return '<img class="' . sf_h($class) . '" src="' . sf_h(asset('ranks/' . $slug . '.svg')) . '" alt="" aria-hidden="true" width="40" height="46" loading="lazy">';
 }
 
 function sf_csrf_token(): string

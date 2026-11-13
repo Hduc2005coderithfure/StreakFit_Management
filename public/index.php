@@ -1,6 +1,17 @@
 <?php
 declare(strict_types=1);
 
+// PHP's development server calls this router for every URL, including CSS/JS/SVG.
+// Serve only existing public assets directly; never expose project files outside public/assets.
+if (PHP_SAPI === 'cli-server') {
+    $assetPath = rawurldecode((string)(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'));
+    $assetRoot = realpath(__DIR__ . '/assets');
+    $assetFile = str_starts_with($assetPath, '/assets/') ? realpath(__DIR__ . $assetPath) : false;
+    if ($assetRoot !== false && $assetFile !== false && str_starts_with($assetFile, $assetRoot . DIRECTORY_SEPARATOR) && is_file($assetFile) && in_array(strtolower(pathinfo($assetFile, PATHINFO_EXTENSION)), ['css','js','svg','png','jpg','jpeg','webp','gif','ico','woff','woff2','ttf','otf','glb','gltf','bin','hdr','mp3','ogg','wav','mp4','webm','json'], true)) {
+        return false;
+    }
+}
+
 define('APP_ROOT', dirname(__DIR__));
 $config = require APP_ROOT . '/config/app.php';
 date_default_timezone_set($config['timezone']);
@@ -30,6 +41,7 @@ foreach (['/groups'=>'groups','/admin/groups'=>'admin_groups','/fund/payments'=>
 }
 $router->post('/api/payos/webhook', [$community,'webhook']);
 $router->post('/api/workout-route', [$community,'track']);
+$router->post('/api/coach', [new \App\Controllers\Api\CoachController(), 'ask']);
 
 $router->get('/', [$home, 'index']);
 $router->post('/', [$home, 'index']);

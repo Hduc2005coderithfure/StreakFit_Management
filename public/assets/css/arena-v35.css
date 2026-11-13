@@ -1,0 +1,14 @@
+/* Arena V3.5 Final – compact accessibility and interaction polish. */
+.sf-arena :is(a,button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid #ffd18b;outline-offset:4px}
+.sf-arena[data-arena-view="community"] :is(a,button,input,select,textarea,[tabindex]):focus-visible{outline-color:#83f4e5}
+.sf-arena .arena-mini-track{scroll-padding-inline:12px;overscroll-behavior-inline:contain;scrollbar-width:thin}
+.sf-arena .post-card .workout-photos img{aspect-ratio:4/3;object-fit:cover;max-width:100%}
+.sf-arena .post-card .reaction-buttons[aria-busy="true"]{cursor:progress;opacity:.72}
+.sf-arena .sf32-save-button[aria-busy="true"]{cursor:progress;opacity:.8}
+.sf-arena .sf33-energy-total strong,.sf-arena .sf33-energy-readout strong,.sf-arena .sf32-dial strong{font-variant-numeric:tabular-nums}
+.sf-arena .page-content{min-width:0}
+.sf-arena .page-content [id^="workout-"]{scroll-margin-top:100px}
+.sf-arena .arena-dock .nav-item{min-width:0;touch-action:manipulation}
+.sf-arena .arena-dock .nav-item small{white-space:nowrap}
+@media(max-width:480px){.sf-arena .arena-dock .nav-item small{font-size:clamp(9px,2.65vw,11px)}.sf-arena .arena-dock .nav-item{min-height:52px}.sf-arena .arena-mini-tab{min-height:44px}.sf-arena .sf32-day{touch-action:manipulation}}
+@media(prefers-reduced-motion:reduce){.sf-arena *, .sf-arena *::before,.sf-arena *::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}

@@ -10,7 +10,7 @@ final class Request
     {
         $path = rawurldecode((string)(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'));
         $base = (string)(require dirname(__DIR__, 2) . '/config/app.php')['base_path'];
-        if ($base !== '' && str_starts_with($path, $base)) $path = substr($path, strlen($base)) ?: '/';
+        if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) $path = substr($path, strlen($base)) ?: '/';
         return '/' . trim($path, '/');
     }
     public function query(string $key, mixed $default = null): mixed { return $_GET[$key] ?? $default; }

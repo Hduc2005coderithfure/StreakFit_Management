@@ -146,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             (new \App\Services\PasswordResetService($db))->change($userId, (string)($_POST['current_password'] ?? ''), (string)($_POST['new_password'] ?? ''));
             session_regenerate_id(true);
             sf_flash('Mật khẩu đã được cập nhật.');
-            sf_redirect('profile');
+            header('Location: ' . url('profile?section=security'), true, 303); exit;
         }
 
         if (str_starts_with($action, 'admin_')) {
@@ -242,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$userId, $height, $weight]);
             $db->commit();
             sf_flash('Đã cập nhật chỉ số sức khỏe.');
-            sf_redirect('profile');
+            header('Location: ' . url('profile?section=health'), true, 303); exit;
         }
 
         if ($action === 'save_goal') {
@@ -256,16 +256,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $times = $_POST['planned_times'] ?? [];
             $notes = $_POST['planned_notes'] ?? [];
             $weekEnd = (new DateTimeImmutable($week, new DateTimeZone($config['timezone'])))->modify('+7 days')->format('Y-m-d');
+            if (!is_array($dates) || !is_array($times) || !is_array($notes) || count($dates) > 7) throw new DomainException('Lịch tập không hợp lệ.');
             $validatedPlans = [];
+            $seenDates = [];
             foreach (is_array($dates) ? $dates : [] as $index => $date) {
+                if (!is_string($date) || !is_string($times[$index] ?? '') || !is_string($notes[$index] ?? '')) throw new DomainException('Lịch tập không hợp lệ.');
                 $time = trim((string)($times[$index] ?? ''));
                 if ($time === '') {
                     continue;
                 }
-                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$date) || $date < $week || $date >= $weekEnd || !preg_match('/^\d{2}:\d{2}$/', $time)) {
+                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$date) || $date < $week || $date >= $weekEnd || !preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $time) || isset($seenDates[$date])) {
                     throw new DomainException('Một ngày hoặc giờ trong lịch tập chưa hợp lệ.');
                 }
                 $note = trim((string)($notes[$index] ?? ''));
+                $seenDates[$date] = true;
                 $validatedPlans[] = [$date, $time . ':00', mb_substr($note, 0, 160)];
             }
             $db->beginTransaction();
@@ -284,7 +288,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $db->commit();
             sf_flash('Đã lưu mục tiêu và lịch dự kiến cho tuần tới. Lịch không ảnh hưởng điểm streak.');
-            sf_redirect('profile');
+            header('Location: ' . url('profile?section=schedule'), true, 303);
+            exit;
         }
 
         if ($action === 'start_workout') {
@@ -314,7 +319,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             sf_notify_others($db, $userId, 'workout', 'Một buổi tập vừa hoàn thành', 'Thẻ tổng kết mới đã được đăng lên bảng tin.');
             sf_flash('Buổi tập hợp lệ đã được đăng lên bảng tin. Điểm tuần sẽ chốt vào Chủ Nhật.');
-            sf_redirect('feed');
+            header('Location: ' . url('dashboard?view=community'), true, 303);
+            exit;
         }
         if ($action === 'discard_workout') {
             (new \App\Services\CheckInService($db, sf_settings()['minimum_workout_seconds'], sf_settings()['checkout_timeout_hours'] * 3600))->discard($userId, (int)($_POST['workout_id'] ?? 0));
@@ -332,7 +338,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$userId, $comment, $workoutId]);
             if ($stmt->rowCount() !== 1) throw new DomainException('Không tìm thấy bài tập có thể bình luận.');
             sf_flash('Đã gửi bình luận.');
-            sf_redirect('feed');
+            header('Location: ' . url('dashboard?view=community#workout-' . $workoutId), true, 303);
+            exit;
         }
 
         if ($action === 'react') {
@@ -355,7 +362,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $db->prepare('INSERT INTO workout_reactions (workout_id, user_id, reaction) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE reaction = VALUES(reaction)');
                 $stmt->execute([$workoutId, $userId, $reaction]);
             }
-            sf_redirect('feed');
+            header('Location: ' . url('dashboard?view=community#workout-' . $workoutId), true, 303);
+            exit;
         }
 
         if ($action === 'mark_read') {
@@ -376,7 +384,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }            $notice = $db->prepare("INSERT INTO notifications (user_id, type, title, body) SELECT id, 'appeal', 'Có kháng cáo cần biểu quyết', ? FROM users WHERE id <> ?");
             $notice->execute([$reason, $userId]);
             sf_flash('Đã gửi kháng cáo ẩn danh đến cộng đồng.');
-            sf_redirect('leaderboard');
+            header('Location: ' . url('leaderboard?view=court'), true, 303); exit;
         }
 
         if ($action === 'vote_appeal') {
@@ -384,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $vote = (string)($_POST['vote'] ?? '');
             (new CourtAppealService($db))->vote($appealId, $userId, $vote);
             sf_flash('Phiếu biểu quyết đã được ghi nhận.');
-            sf_redirect('leaderboard');
+            header('Location: ' . url('leaderboard?view=court'), true, 303); exit;
         }
         if (in_array($action, ['fund_join','fund_leave','fund_mark_paid','fund_propose','fund_start_vote','fund_vote','fund_close_vote'], true)) {
             $month = (new DateTimeImmutable('first day of this month', new DateTimeZone($config['timezone'])))->format('Y-m-d');
@@ -398,13 +406,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($action === 'fund_join') {
                 (new PenaltyPoolService($db))->join($fundId, $userId);
                 sf_flash('Đã đăng ký tham gia quỹ tháng này. Website chỉ ghi sổ, không giữ hoặc chuyển tiền.');
-                sf_redirect((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile');
+                header('Location: ' . url((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile?section=fund'), true, 303); exit;
             }
 
             if ($action === 'fund_leave') {
                 (new PenaltyPoolService($db))->leave($fundId, $userId);
                 sf_flash('Đã cập nhật lựa chọn tham gia quỹ.');
-                sf_redirect((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile');
+                header('Location: ' . url((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile?section=fund'), true, 303); exit;
             }
 
             $canManageFund = $permissionService->can($userId, 'fund.manage');
@@ -414,7 +422,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $memberId = (int)($_POST['member_id'] ?? 0);
                 (new \App\Services\AdminService($db))->recordFundTransaction($userId, $fundId, $memberId, 'contribution', (int)$fund['contribution_amount'], 'Quản trị viên xác nhận đã đóng');
                 sf_flash('Đã cập nhật sổ quỹ tháng.');
-                sf_redirect((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile');
+                header('Location: ' . url((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile?section=fund'), true, 303); exit;
             }
 
             $memberStmt = $db->prepare('SELECT opted_in FROM fund_members WHERE fund_id = ? AND user_id = ?');
@@ -433,7 +441,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 (new PenaltyPoolService($db))->propose($fundId, $userId, (int)$amount);
                 sf_flash('Đã lưu đề xuất mức phạt tháng.');
-                sf_redirect('profile');
+                header('Location: ' . url('profile?section=fund'), true, 303); exit;
             }
 
             if ($action === 'fund_start_vote') {
@@ -448,7 +456,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 (new PenaltyPoolService($db))->startVote($fundId, $userId);
                 sf_flash('Đã mở biểu quyết mức phạt tháng.');
-                sf_redirect((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile');
+                header('Location: ' . url((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile?section=fund'), true, 303); exit;
             }
 
             if ($action === 'fund_vote') {
@@ -463,7 +471,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 (new PenaltyPoolService($db))->vote($fundId, $userId, (int)$amount);
                 sf_flash('Đã ghi nhận phiếu biểu quyết.');
-                sf_redirect('profile');
+                header('Location: ' . url('profile?section=fund'), true, 303); exit;
             }
 
             if ($action === 'fund_close_vote') {
@@ -479,7 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 (new PenaltyPoolService($db))->closeVote($fundId, $userId);
                 sf_flash('Đã chốt mức phạt tháng ở ' . number_format((int)$amount) . 'đ.');
-                sf_redirect((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile');
+                header('Location: ' . url((string)($_POST['return_to'] ?? '') === 'admin' ? 'admin' : 'profile?section=fund'), true, 303); exit;
             }
         }
 
@@ -512,7 +520,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . url($guestTarget), true, 303);
         exit;
     }
+    if ($action === 'save_goal') {
+        header('Location: ' . url('profile?section=schedule'), true, 303);
+        exit;
+    }
+    if (in_array($action, ['comment', 'react'], true)) {
+        header('Location: ' . url('dashboard?view=community#workout-' . (int)($_POST['workout_id'] ?? 0)), true, 303);
+        exit;
+    }
     $returnToAdmin = str_starts_with($action, 'admin_') || (string)($_POST['return_to'] ?? '') === 'admin';
+    if (!$returnToAdmin) {
+        $returnPath = match ($action) {
+            'change_password' => 'profile?section=security',
+            'update_health' => 'profile?section=health',
+            'update_display_name' => 'profile?section=profile',
+            'vote_appeal', 'appeal' => 'leaderboard?view=court',
+            default => str_starts_with($action, 'fund_') ? 'profile?section=fund' : null,
+        };
+        if ($returnPath !== null) { header('Location: ' . url($returnPath), true, 303); exit; }
+    }
     sf_redirect($returnToAdmin ? 'admin' : (string)($_GET['tab'] ?? 'feed'));
 }
 
@@ -570,34 +596,33 @@ if ($tab === 'history') {
     $workouts = $historyStmt->fetchAll();
 }
 
-$feedStmt = $db->prepare("SELECT w.id AS workout_id, w.user_id, w.checked_in_at, w.checked_out_at, w.duration_seconds, u.display_name, u.total_points, u.current_streak, p.caption, (SELECT COUNT(*) FROM workout_reactions r WHERE r.workout_id = w.id) AS reaction_count, (SELECT COUNT(*) FROM workout_comments c WHERE c.workout_id = w.id) AS comment_count, (SELECT r2.reaction FROM workout_reactions r2 WHERE r2.workout_id = w.id AND r2.user_id = ?) AS my_reaction FROM workouts w JOIN workout_posts p ON p.workout_id = w.id JOIN users u ON u.id = w.user_id WHERE w.status = 'valid' ORDER BY w.checked_out_at DESC LIMIT 20");
-$feedStmt->execute([$userId]);
-$feed = $feedStmt->fetchAll();
+$feed = [];
 $activityMembers = [];
 $activeTrainingCount = 0;
 if ($tab === 'feed') {
+    $feedStmt = $db->prepare("SELECT w.id AS workout_id, w.user_id, w.checked_in_at, w.checked_out_at, w.duration_seconds, u.display_name, u.total_points, u.current_streak, p.caption, (SELECT COUNT(*) FROM workout_reactions r WHERE r.workout_id = w.id) AS reaction_count, (SELECT COUNT(*) FROM workout_comments c WHERE c.workout_id = w.id) AS comment_count, (SELECT r2.reaction FROM workout_reactions r2 WHERE r2.workout_id = w.id AND r2.user_id = ?) AS my_reaction FROM workouts w JOIN workout_posts p ON p.workout_id = w.id JOIN users u ON u.id = w.user_id WHERE w.status = 'valid' ORDER BY w.checked_out_at DESC LIMIT 20");
+    $feedStmt->execute([$userId]);
+    $feed = $feedStmt->fetchAll();
     $activityStmt = $db->prepare("SELECT u.id, u.display_name, u.current_streak, w.status, w.checked_in_at, w.checked_out_at FROM users u JOIN workouts w ON w.id = (SELECT MAX(w2.id) FROM workouts w2 WHERE w2.user_id = u.id) WHERE u.id <> ? AND (w.status = 'in_progress' OR (w.status = 'valid' AND w.checked_out_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY))) ORDER BY (w.status = 'in_progress') DESC, w.checked_in_at DESC LIMIT 8");
     $activityStmt->execute([$userId]);
     $activityMembers = $activityStmt->fetchAll();
     $activeTrainingCount = count(array_filter($activityMembers, static fn(array $member): bool => $member['status'] === 'in_progress'));
-}
 $commentsMap = [];
 if ($feed) {
     $ids = array_map(static fn(array $post): int => (int)$post['workout_id'], $feed);
     $marks = implode(',', array_fill(0, count($ids), '?'));
-    $commentStmt = $db->prepare("SELECT c.id, c.workout_id, c.user_id, c.comment_text, u.display_name FROM workout_comments c JOIN users u ON u.id = c.user_id WHERE c.workout_id IN ($marks) ORDER BY c.created_at DESC");
+    $commentStmt = $db->prepare("SELECT c.id, c.workout_id, c.user_id, c.comment_text, u.display_name FROM (SELECT id, workout_id, user_id, comment_text, created_at, ROW_NUMBER() OVER (PARTITION BY workout_id ORDER BY created_at DESC, id DESC) AS row_num FROM workout_comments WHERE workout_id IN ($marks)) c JOIN users u ON u.id = c.user_id WHERE c.row_num <= 3 ORDER BY c.created_at DESC, c.id DESC");
     $commentStmt->execute($ids);
     foreach ($commentStmt->fetchAll() as $comment) {
         $id = (int)$comment['workout_id'];
-        if (count($commentsMap[$id] ?? []) < 3) {
-            $commentsMap[$id][] = $comment;
-        }
+        $commentsMap[$id][] = $comment;
     }
 }
 foreach ($feed as &$post) {
     $post['comments'] = $commentsMap[(int)$post['workout_id']] ?? [];
 }
 unset($post);
+}
 
 $notificationsStmt = $db->prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 40');
 $notificationsStmt->execute([$userId]);
@@ -801,28 +826,40 @@ if ($tab !== 'admin' && $canManageFund) {
     $fundMembers = $fundMembersStmt->fetchAll();
 }
 
+$leaderboard = [];
+if ($tab === 'leaderboard') {
 if ($period === 'week') {
     $rankStmt = $db->prepare("SELECT u.id, u.display_name, u.total_points, u.current_streak, u.total_sessions, u.total_minutes, COALESCE(g.target_sessions, 3) AS target_sessions, COUNT(DISTINCT CASE WHEN w.status = 'valid' THEN w.workout_date END) AS valid_sessions FROM users u LEFT JOIN weekly_goals g ON g.user_id = u.id AND g.week_start = ? LEFT JOIN workouts w ON w.user_id = u.id AND w.week_start = ? GROUP BY u.id, u.display_name, u.total_points, u.current_streak, u.total_sessions, u.total_minutes, g.target_sessions");
     $rankStmt->execute([$currentWeek, $currentWeek]);
-    $leaderboard = array_map(static function (array $row) use ($db, $currentWeek): array {
-        $target = sf_member_week_target($db, (int)$row['id'], $currentWeek, (int)$row['target_sessions']);
+    $rankRows = $rankStmt->fetchAll();
+    $firstCheckins = [];
+    if ($rankRows) {
+        $ids = array_map(static fn(array $row): int => (int)$row['id'], $rankRows);
+        $marks = implode(',', array_fill(0, count($ids), '?'));
+        $firstStmt = $db->prepare("SELECT user_id, MIN(workout_date) AS first_checkin FROM workouts WHERE user_id IN ($marks) GROUP BY user_id");
+        $firstStmt->execute($ids);
+        foreach ($firstStmt->fetchAll() as $firstRow) $firstCheckins[(int)$firstRow['user_id']] = (string)$firstRow['first_checkin'];
+    }
+    $leaderboard = array_map(static function (array $row) use ($firstCheckins, $currentWeek): array {
+        $target = sf_week_target_from_first_checkin($currentWeek, (int)$row['target_sessions'], $firstCheckins[(int)$row['id']] ?? null);
         $weekly = $target > 0 ? sf_week_score($target, (int)$row['valid_sessions'], (int)$row['current_streak']) : ['total' => 0];
-        return ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'points' => $weekly['total'], 'streak' => (int)$row['current_streak'], 'sessions' => (int)$row['valid_sessions'], 'target' => (int)$row['target_sessions'], 'minutes' => (int)$row['total_minutes']];
-    }, $rankStmt->fetchAll());
+        return ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'points' => $weekly['total'], 'total_points' => (int)$row['total_points'], 'streak' => (int)$row['current_streak'], 'sessions' => (int)$row['valid_sessions'], 'target' => (int)$row['target_sessions'], 'minutes' => (int)$row['total_minutes']];
+    }, $rankRows);
 } elseif ($period === 'month') {
     $monthStart = (new DateTimeImmutable('first day of this month', new DateTimeZone($config['timezone'])))->format('Y-m-d');
     $nextMonth = (new DateTimeImmutable($monthStart, new DateTimeZone($config['timezone'])))->modify('+1 month')->format('Y-m-d');
-    $rankStmt = $db->prepare('SELECT u.id, u.display_name, u.current_streak, u.total_sessions, u.total_minutes, COALESCE(SUM(s.total_week_points), 0) AS points FROM users u LEFT JOIN weekly_scores s ON s.user_id = u.id AND s.week_start >= ? AND s.week_start < ? GROUP BY u.id, u.display_name, u.current_streak, u.total_sessions, u.total_minutes');
+    $rankStmt = $db->prepare('SELECT u.id, u.display_name, u.total_points, u.current_streak, u.total_sessions, u.total_minutes, COALESCE(SUM(s.total_week_points), 0) AS points FROM users u LEFT JOIN weekly_scores s ON s.user_id = u.id AND s.week_start >= ? AND s.week_start < ? GROUP BY u.id, u.display_name, u.total_points, u.current_streak, u.total_sessions, u.total_minutes');
     $rankStmt->execute([$monthStart, $nextMonth]);
-    $leaderboard = array_map(static fn(array $row): array => ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'points' => (int)$row['points'], 'streak' => (int)$row['current_streak'], 'sessions' => (int)$row['total_sessions'], 'minutes' => (int)$row['total_minutes']], $rankStmt->fetchAll());
+    $leaderboard = array_map(static fn(array $row): array => ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'points' => (int)$row['points'], 'total_points' => (int)$row['total_points'], 'streak' => (int)$row['current_streak'], 'sessions' => (int)$row['total_sessions'], 'minutes' => (int)$row['total_minutes']], $rankStmt->fetchAll());
 } else {
     $rankStmt = $db->query('SELECT id, display_name, total_points AS points, current_streak, total_sessions, total_minutes FROM users');
-    $leaderboard = array_map(static fn(array $row): array => ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'points' => (int)$row['points'], 'streak' => (int)$row['current_streak'], 'sessions' => (int)$row['total_sessions'], 'minutes' => (int)$row['total_minutes']], $rankStmt->fetchAll());
+    $leaderboard = array_map(static fn(array $row): array => ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'points' => (int)$row['points'], 'total_points' => (int)$row['points'], 'streak' => (int)$row['current_streak'], 'sessions' => (int)$row['total_sessions'], 'minutes' => (int)$row['total_minutes']], $rankStmt->fetchAll());
 }
 usort($leaderboard, static function (array $a, array $b): int {
     return ($b['points'] <=> $a['points']) ?: ($b['sessions'] <=> $a['sessions']) ?: ((int)($b['target'] ?? 0) <=> (int)($a['target'] ?? 0)) ?: ($b['minutes'] <=> $a['minutes']);
 });
 $leaderboard = array_slice($leaderboard, 0, 50);
+}
 
 $appealStmt = $db->prepare("SELECT a.id, a.user_id, a.reason, a.proof_path, a.created_at, (SELECT COUNT(*) FROM appeal_votes v WHERE v.appeal_id = a.id AND v.vote = 'yes') AS yes_votes, (SELECT COUNT(*) FROM appeal_votes v WHERE v.appeal_id = a.id AND v.vote = 'no') AS no_votes, (SELECT v.vote FROM appeal_votes v WHERE v.appeal_id = a.id AND v.voter_id = ?) AS my_vote FROM appeals a WHERE a.status = 'pending' ORDER BY a.created_at DESC LIMIT 20");
 $appealStmt->execute([$userId]);

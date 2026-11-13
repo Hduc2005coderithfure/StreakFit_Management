@@ -14,10 +14,21 @@ $title = ['register' => 'Bắt đầu hành trình', 'forgot' => 'Quên mật kh
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0e0e12">
     <title>StreakFit · <?= sf_h($title) ?></title>
-    <link rel="stylesheet" href="<?= sf_h(asset('css/streakfit.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-future.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-motion.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-v3.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-atmosphere.css')) ?>">
 </head>
-<body class="auth-page">
+<body class="auth-page sf-future sf-arena" data-sf36-clock-only>
 <main class="auth-shell">
+    <div class="auth-showcase arena-auth-showcase" aria-hidden="true">
+        <canvas data-arena-auth aria-hidden="true"></canvas>
+        <div class="auth-showcase-head"><span>STREAKFIT // COMMUNITY</span><span>✦</span></div>
+        <div class="auth-orbit"><div class="auth-orbit-core">SF</div><i></i><i></i><i></i></div>
+        <div class="auth-showcase-copy"><span>THE DISCIPLINE ARENA</span><strong>BÌNH NGUYÊN<br><em>VÔ TẬN.</em></strong><p>Kỷ luật hôm nay. Sức mạnh ngày mai.</p></div>
+        <div class="auth-showcase-foot"><span>01 / KỶ LUẬT</span><span>02 / CỘNG ĐỒNG</span><span>03 / TIẾN BỘ</span></div>
+    </div>
     <a class="brand auth-brand" href="<?= sf_h(url('login')) ?>"><span>Streak<i>Fit</i></span><small>Rèn luyện cùng nhau</small></a>
     <section class="auth-card">
         <div class="eyebrow">CỘNG ĐỒNG TẬP LUYỆN</div>
@@ -44,5 +55,10 @@ $title = ['register' => 'Bắt đầu hành trình', 'forgot' => 'Quên mật kh
     </section>
     <p class="auth-note">StreakFit · Thời gian của bạn, tiến bộ của bạn.</p>
 </main>
+<script src="<?= sf_h(sf_asset_version('js/streakfit-future.js')) ?>" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/arena-3d.js')) ?>" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/arena-ui.js')) ?>" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/arena-atmosphere.js')) ?>" defer></script>
 </body>
 </html>

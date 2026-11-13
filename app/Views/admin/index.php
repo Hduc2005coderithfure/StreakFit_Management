@@ -22,9 +22,11 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#0d0d13">
     <title>StreakFit · Admin Center</title>
-    <link rel="stylesheet" href="<?= sf_h(asset('css/admin.css')) ?>?v=20261111-demo1">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/admin.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-future.css')) ?>">
+    <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-motion.css')) ?>">
 </head>
-<body class="admin-root" data-tab="admin">
+<body class="admin-root sf-future" data-tab="admin">
 <a class="sr-only skip-link" href="#adminMain">Đến nội dung chính</a>
 <div class="admin-console">
     <aside class="admin-sidebar" id="adminSidebar" aria-label="Điều hướng quản trị">
@@ -68,6 +70,8 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
 <?php if ($canManageMembers): ?>
 <dialog id="adminInvite" class="admin-dialog"><form method="dialog"><button class="admin-circle" aria-label="Đóng lời mời">×</button></form><h2>Mời thành viên</h2><p>Gửi liên kết này để bạn bè tạo tài khoản StreakFit.</p><label>Liên kết đăng ký<input id="adminInviteUrl" readonly value="<?= sf_h(rtrim($config['app_url'], '/') . '/register') ?>"></label><button type="button" class="btn primary" data-copy-invite>Sao chép liên kết</button><p role="status" data-invite-status></p></dialog>
 <?php endif; ?>
-<script src="<?= sf_h(asset('js/admin.js')) ?>?v=20261111-demo1" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/admin.js')) ?>" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/streakfit-future.js')) ?>" defer></script>
+<script src="<?= sf_h(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script>
 </body>
 </html>
