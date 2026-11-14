@@ -93,7 +93,7 @@
       members: ['Quản lý thành viên', 'Xem hồ sơ, phân quyền và trạng thái tài khoản.'],
       reviews: ['Buổi tập & kiểm duyệt', 'Theo dõi buổi tập, kháng cáo và báo cáo nội dung.'],
       permissions: ['Phân quyền Admin', 'Cấp chính xác các quyền chức năng cho từng tài khoản quản trị.'],
-      fund: ['Quỹ kỷ luật', 'Ghi nhận giao dịch và quản lý sổ quỹ minh bạch.'],
+      fund: ['Quỹ nhóm', 'Ghi nhận giao dịch và quản lý sổ quỹ minh bạch.'],
       reports: ['Báo cáo & lịch sử', 'Xem điểm tuần, audit log và trạng thái tác vụ nền.'],
       settings: ['Cài đặt nhóm', 'Điều chỉnh cấu hình ảnh hưởng đến hoạt động cộng đồng.']
     };
@@ -173,6 +173,18 @@
   const canvas = document.getElementById('captureCanvas');
   let stream = null;
   let facingMode = 'environment';
+  let cameraGeneration = 0;
+  function stopCamera() {
+    cameraGeneration++;
+    stream?.getTracks().forEach(track => track.stop()); stream = null;
+    if(video) video.srcObject = null;
+    cameraFrame?.classList.remove('live');
+    if(placeholder) placeholder.hidden = false;
+    if(captureButton) captureButton.disabled = true;
+    const flip = document.querySelector('[data-camera-flip]'); if(flip) flip.disabled = true;
+    if(startCameraButton) startCameraButton.textContent = 'Mở camera';
+  }
+  document.addEventListener('sf:camera-stop', stopCamera);
 
   async function openCamera() {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -180,13 +192,15 @@
       return;
     }
     try {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      stream = await navigator.mediaDevices.getUserMedia({
+      stopCamera(); const generation = cameraGeneration;
+      const nextStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: facingMode }, width: { ideal: 960 }, height: { ideal: 1280 } },
         audio: false
       });
-      video.srcObject = stream;
+      if(generation !== cameraGeneration) { nextStream.getTracks().forEach(track=>track.stop()); return; }
+      stream = nextStream; video.srcObject = stream;
       await video.play();
+      if(generation !== cameraGeneration) return;
       cameraFrame?.classList.add('live');
       if (placeholder) placeholder.hidden = true;
       const startedAt = Number(document.querySelector('[data-checkin-start]')?.dataset.checkinStart || 0);
@@ -260,7 +274,7 @@
     window.setInterval(refreshTimer, 1000);
   }
 
-  window.addEventListener('pagehide', () => stream?.getTracks().forEach(track => track.stop()));
+  window.addEventListener('pagehide', stopCamera);
 
   const assistantForm = document.getElementById('assistantForm');
   assistantForm?.addEventListener('submit', async event => {

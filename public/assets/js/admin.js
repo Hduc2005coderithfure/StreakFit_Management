@@ -11,7 +11,7 @@
     overview: ['Tổng quan cộng đồng', 'Theo dõi và quản lý hoạt động của nhóm trong một nơi.'],
     members: ['Quản lý thành viên', 'Xem thông tin, vai trò và trạng thái tài khoản.'],
     reviews: ['Buổi tập & kiểm duyệt', 'Theo dõi check-in và xử lý báo cáo, kháng cáo.'],
-    fund: ['Quỹ kỷ luật', 'Theo dõi và xác nhận quỹ tự nguyện.'],
+    fund: ['Quỹ nhóm', 'Theo dõi và xác nhận quỹ tự nguyện.'],
     reports: ['Báo cáo & thống kê', 'Phân tích hoạt động và kỷ luật của nhóm.'],
     settings: ['Cài đặt nhóm', 'Điều chỉnh những cấu hình quản trị được cấp phép.'],
     permissions: ['Phân quyền Admin', 'Cấp quyền chức năng riêng cho từng quản trị viên.']

@@ -1,0 +1,78 @@
+/* Arena V3.7 — glass, typography and motion. Presentation only. */
+:root{--sf37-font:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;--sf37-ease:cubic-bezier(.22,.8,.25,1);--sf37-accent:#ffc475;--sf37-accent-rgb:255,196,117}
+body.sf-future{font-family:var(--sf37-font);font-size:15px;line-height:1.55;letter-spacing:normal;text-rendering:optimizeLegibility}
+body.sf-future :is(button,input,select,textarea){font-family:inherit}
+body.sf-future :is(h1,h2,h3,.auth-showcase-copy strong,.arena-entry-copy h1,.arena-command-header h2,.sf33-community-copy h1,.sf33-energy-head h2){letter-spacing:-.025em;line-height:1.2;font-weight:750;overflow-wrap:break-word}
+body.sf-future :is(.eyebrow,.arena-kicker,.arena-mini-caption,.sf36-eyebrow,.admin-overline,.sf-energy-overline){letter-spacing:.075em;line-height:1.55;font-weight:720}
+body.sf-future :is(.muted,.post-caption,.comment-list p,.notification-card p,.auth-card>p,.assistant-answer){font-size:13px;line-height:1.6}
+body.sf-future :is(.post-author-meta strong,.notification-card strong,.leader-name b){font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+body.sf-future :is(.post-author-meta small,.leader-name small,.notification-card small,.metric-card small,.profile-highlights small,.sf36-weather small){font-size:12px;line-height:1.45}
+body.sf-future :is(.post-actions,.comment-form input,.assistant-form input,.stack-form label,.health-form label){font-size:13px;line-height:1.45}
+body.sf-future :is(.stack-form input,.stack-form select,.stack-form textarea,.health-form input,.health-form select,.comment-form input,.assistant-form input){font-size:16px;line-height:1.45;min-height:44px;transition:border-color .18s,box-shadow .18s,background .18s}
+body.sf-future :is(.stack-form input,.stack-form select,.stack-form textarea,.health-form input,.health-form select,.comment-form input,.assistant-form input):focus{border-color:#ffc475a0;box-shadow:0 0 0 3px #ffc4751c;outline:none}
+body.sf-future :is(.stack-form input,.stack-form select,.stack-form textarea,.health-form input,.health-form select,.comment-form input,.assistant-form input):focus-visible{outline:2px solid #ffc475;outline-offset:2px}
+body.sf-future :is(.btn,.text-link,.arena-outline,.sf36-weather-button){font-size:13px;line-height:1.4;font-weight:700;min-height:40px}
+body.sf-future :is(.btn,.icon-button,.arena-outline,.reaction,.sf36-weather-button):not(:disabled){transition:transform .18s var(--sf37-ease),filter .18s,box-shadow .18s,background-color .18s;touch-action:manipulation}
+body.sf-future :is(.btn,.icon-button,.arena-outline,.reaction,.sf36-weather-button):not(:disabled):active{transform:scale(.96)}
+body.sf-future .reaction{min-width:36px;min-height:36px}
+body.sf-future .reaction.selected{box-shadow:0 0 0 1px #ffb17460,0 0 12px #ff985625}
+body.sf-future .reaction:disabled{cursor:wait;opacity:.55}
+body.sf-future .brand small{font-size:12px;line-height:1.45;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+body.sf-future .topbar .brand{min-width:0;flex:1}body.sf-future .top-actions{flex-shrink:0}
+body.sf-future .sf36-weather-foot{line-height:1.55;font-size:11px}body.sf-future .sf36-weather-summary{min-width:0;overflow-wrap:anywhere}
+body.sf-future .sf33-energy-rank small{letter-spacing:.04em;line-height:1.4}body.sf-future .sf33-path-node span{line-height:1.4;letter-spacing:0}
+/* Keep the existing weather palettes, then give the selected tab its own glass lens. */
+body.sf-arena[data-arena-view="community"]{--sf37-accent:#8de7e1;--sf37-accent-rgb:141,231,225}
+body.sf-arena .bottom-nav.arena-dock{isolation:isolate;background:linear-gradient(145deg,#293443ba,#101722d9 65%,#202a38bf);border:1px solid #e1edff38;box-shadow:0 16px 44px #0009,inset 0 1px #ffffff30,inset 0 -1px #ffffff0b;backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);border-radius:24px;overflow:visible}
+.sf37-dock-lens{position:absolute;inset:auto;left:0;top:0;z-index:0;pointer-events:none;opacity:0;border-radius:17px;border:1px solid rgba(var(--sf37-accent-rgb),.6);background:radial-gradient(ellipse at 50% 0%,#ffffff22,transparent 72%),linear-gradient(145deg,rgba(var(--sf37-accent-rgb),.24),rgba(var(--sf37-accent-rgb),.055));box-shadow:inset 0 1px #ffffff44,inset 0 -1px rgba(var(--sf37-accent-rgb),.25),0 4px 19px rgba(var(--sf37-accent-rgb),.15);transition:none}
+.sf37-dock-lens.is-ready{opacity:1;transition:transform .32s var(--sf37-ease),width .32s var(--sf37-ease),height .22s var(--sf37-ease),background .24s,border-color .24s}
+body.sf-arena .arena-dock .nav-item{z-index:1;min-height:56px;gap:4px;transition:color .22s,transform .22s var(--sf37-ease);border-radius:17px}
+body.sf-arena .arena-dock.sf37-glass-ready .nav-item.active{background:transparent;box-shadow:none;color:var(--sf37-accent)}
+body.sf-arena .arena-dock.sf37-glass-ready .nav-item.active::after{background:var(--sf37-accent);box-shadow:0 0 9px var(--sf37-accent)}
+body.sf-arena .arena-dock .nav-item>small{font-size:11px;line-height:1.35;font-weight:650;letter-spacing:0}
+body.sf-arena .arena-dock .nav-item>span.arena-dock-icon{transition:transform .28s var(--sf37-ease),filter .2s}
+body.sf-arena .arena-dock .nav-item.active>span.arena-dock-icon{transform:translateY(-1px);filter:drop-shadow(0 0 7px rgba(var(--sf37-accent-rgb),.65))}
+body.sf-arena .arena-dock .nav-item:active>span.arena-dock-icon{transform:scale(.88)}
+body.sf-arena .arena-mini-nav{background:linear-gradient(145deg,#273341b0,#141c28d9);border-color:#d0e4ff30;box-shadow:inset 0 1px #ffffff18,0 10px 25px #0002;backdrop-filter:blur(16px)}
+body.sf-arena .arena-mini-tab{font-size:13px;line-height:1.4;min-height:44px;letter-spacing:0}
+body.sf-arena .arena-mini-indicator{border-color:rgba(var(--sf37-accent-rgb),.56);background:linear-gradient(150deg,#ffffff13,rgba(var(--sf37-accent-rgb),.13));box-shadow:inset 0 1px #ffffff35,0 5px 16px rgba(var(--sf37-accent-rgb),.11)}
+body.sf-arena .arena-mini-indicator.is-ready{transition:transform .32s var(--sf37-ease),width .32s var(--sf37-ease),height .22s var(--sf37-ease)}
+/* Authentication: native navigation and original PHP forms, not a simulated SPA. */
+body.auth-page.sf-arena .auth-shell{gap:20px}
+body.auth-page.sf-arena .auth-card{border-radius:24px;overflow:hidden;background:linear-gradient(140deg,#273243ed,#111822f5);box-shadow:0 22px 65px #0007,inset 0 1px #ffffff24}
+body.auth-page.sf-arena .auth-card h1{font-size:clamp(27px,4vw,39px);line-height:1.22;margin:8px 0 10px}
+body.auth-page.sf-arena .auth-showcase-copy strong{font-weight:800;letter-spacing:-.035em;line-height:1.08;font-size:clamp(42px,5vw,70px)}
+body.auth-page.sf-arena .auth-showcase-copy>span{letter-spacing:.1em;line-height:1.5}
+body.auth-page.sf-arena .auth-showcase-copy p{font-size:15px;line-height:1.55}
+body.auth-page.sf-arena .auth-showcase::after{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:linear-gradient(132deg,transparent 48%,#e8a4512a 48.2%,#b8702d0b 75%);transform-origin:100% 0;transition:transform .35s var(--sf37-ease)}
+body.auth-page.sf-arena[data-sf37-auth-mode="register"] .auth-showcase::after{transform:scaleX(1.16)}
+body.auth-page.sf-arena .auth-switch{position:relative;isolation:isolate;gap:4px;padding:5px;border-radius:15px;background:#0a111b9c;border-color:#dce5f32b}
+body.auth-page.sf-arena .auth-switch a{position:relative;z-index:1;font-size:14px;line-height:1.45;min-height:44px;display:grid;place-items:center;font-weight:650;border-radius:11px;transition:color .2s,background .2s}
+body.auth-page.sf-arena .auth-switch a.active{background:linear-gradient(145deg,#ffd49a33,#b0763733);color:#fff1d6;box-shadow:inset 0 0 0 1px #ffd49a77,inset 0 1px #ffffff26}
+body.auth-page.sf-arena .auth-switch a:active{transform:scale(.97)}
+body.auth-page.sf-arena .stack-form{gap:10px}
+body.auth-page.sf-arena .stack-form label{font-size:14px;font-weight:650;color:#dce6f3}
+body.auth-page.sf-arena .stack-form label[for="sf37-password"]{margin-bottom:-5px}
+body.auth-page.sf-arena .stack-form input{min-height:48px;border-radius:12px;background:#0e1623;color:#f5f7fb;padding:12px 13px}
+body.auth-page.sf-arena .sf37-password{position:relative;min-width:0}
+body.auth-page.sf-arena .sf37-password input{width:100%}
+body.auth-page.sf-arena .sf37-password:has(.sf37-password-toggle:not([hidden])) input{padding-inline-end:72px}
+.sf37-password-toggle{position:absolute;right:5px;top:5px;bottom:5px;min-width:54px;border:1px solid #ffffff22;border-radius:9px;color:#ffdaa5;background:#293443;font-size:13px;font-weight:650}
+.sf37-password-toggle[hidden]{display:none}.sf37-password-hint{font-size:12px;line-height:1.5;color:#c2cddd}
+body.auth-page.sf-arena .auth-foot{font-size:12px!important;line-height:1.55;color:#b7c4d6}body.auth-page.sf-arena .auth-foot a{color:#ffda9f;text-decoration:underline;text-underline-offset:3px}
+body.auth-page.sf-arena .auth-note{font-size:12px;color:#aebdcd}
+@keyframes sf37-auth-in{from{opacity:.65;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes sf37-auth-register{from{opacity:.65;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+body.auth-page.sf-arena .auth-card{animation:sf37-auth-in .32s var(--sf37-ease) both}
+body.auth-page.sf-arena[data-sf37-auth-mode="register"] .auth-card{animation-name:sf37-auth-register}
+@media(max-width:520px){body.sf-arena .bottom-nav.arena-dock{border-radius:21px;padding:5px;gap:2px;min-height:69px}body.sf-arena .arena-dock .nav-item>small{font-size:clamp(10px,2.75vw,12px)}body.sf-arena .arena-dock .nav-item{min-height:56px}body.sf-arena .sf37-dock-lens{border-radius:14px}body.sf-arena .arena-mini-tab{font-size:12px;padding-inline:9px}body.sf-arena .page-content{padding-bottom:130px}body.auth-page.sf-arena{padding:16px}body.auth-page.sf-arena .auth-card{padding:22px 18px}body.sf-future .topbar .rank-chip{font-size:10px;padding:5px 6px}}
+@media(max-width:360px){body.sf-arena .arena-dock .nav-item>small{font-size:10px;white-space:normal;text-align:center}body.sf-arena .arena-dock .nav-item>span.arena-dock-icon{height:30px;width:34px}body.sf-arena .arena-dock .nav-checkin>span.arena-dock-icon{width:36px;height:34px}}
+@media(prefers-reduced-motion:reduce){.sf37-dock-lens,.sf37-dock-lens.is-ready,body.sf-future :is(.btn,.icon-button,.arena-outline,.reaction,.sf36-weather-button),body.auth-page.sf-arena .auth-card,body.auth-page.sf-arena .auth-showcase::after,body.auth-page.sf-arena .auth-switch a,body.sf-arena .arena-mini-indicator.is-ready{animation:none!important;transition:none!important}body.auth-page.sf-arena .auth-card{opacity:1;transform:none}}
+/* Keep both navigation levels aligned to the active community accent. */
+body.sf-arena[data-arena-view="community"] .arena-mini-tab.is-active{color:#a5f5ec}
+body.sf-arena[data-arena-view="community"] .arena-mini-indicator{border-color:#8de7e17d;background:linear-gradient(150deg,#ffffff0d,#8de7e120);box-shadow:inset 0 1px #ffffff30,0 4px 16px #8de7e118}
+body.auth-page.sf-arena .auth-showcase-copy em{background:linear-gradient(90deg,#ffe5b8,#ffbc69);background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 2px 8px #0009)}
+body.sf-future .post-actions{flex-wrap:wrap;row-gap:8px}
+body.sf-future .reaction-buttons{flex-wrap:wrap}
+body.sf-future .sf32-day :is(strong,span,small){line-height:1.4;letter-spacing:0}
+body.sf-future .sf32-day input[type="time"]{font-size:16px;max-width:100%;min-width:0}

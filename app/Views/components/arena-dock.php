@@ -1,0 +1,5 @@
+    <nav class="bottom-nav arena-dock" aria-label="Điều hướng chính">
+        <?php $arenaDock = ['overview'=>['Tổng quan','dashboard?view=overview','grid'], 'community'=>['Cộng đồng','dashboard?view=community','people'], 'checkin'=>['Tập luyện','workouts','plus'], 'leaderboard'=>['Bảng vàng','leaderboard?view=rank','trophy'], 'profile'=>['Cá nhân','profile','user']]; foreach ($arenaDock as $key => [$label,$path,$icon]): $dockActive = $tab === 'feed' ? ($key === $arenaView || ($key === 'overview' && $arenaView === 'insights')) : ($tab === $key || (in_array($tab,['history','route'],true) && $key === 'checkin') || ($tab === 'groups' && $key === 'community') || ($tab === 'payments' && $key === 'profile')); ?>
+        <a class="nav-item <?= $dockActive ? 'active' : '' ?> <?= $key === 'checkin' ? 'nav-checkin' : '' ?>" href="<?= sf_h(url($path)) ?>" <?= in_array($key,['overview','community'],true) ? 'data-sf33-view="' . $key . '"' : '' ?> <?= $dockActive ? 'aria-current="page"' : '' ?>><span class="arena-dock-icon"><?= $arenaIcon($icon) ?></span><small><?= sf_h($label) ?></small></a>
+        <?php endforeach; ?>
+    </nav>

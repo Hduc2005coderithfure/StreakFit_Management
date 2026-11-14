@@ -34,6 +34,7 @@
     const doc=w.document,body=doc.body;if(!body)return;
     const panel=doc.querySelector('[data-sf36-panel]');
     if(!panel&&!body.hasAttribute('data-sf36-clock-only'))return;
+    const onOverview=()=>!!panel&&body.dataset.tab==='feed'&&body.dataset.arenaView==='overview';
     const $=s=>panel&&panel.querySelector('[data-sf36-'+s+']');
     const key=panel?'sf36-weather-'+panel.dataset.member:null;const prefKey=key?key+'-enabled':null;
     let data=null,enabled=false,busy=false,token=0,controller=null,disposed=false,lastError='';
@@ -43,6 +44,7 @@
     function text(s,v){const el=$(s);if(el)el.textContent=v;}
     function status(v){text('status',v);}
     function render(){
+      if(panel&&!onOverview()){delete body.dataset.sf36Phase;delete body.dataset.sf36Weather;delete body.dataset.sf36Paused;return;}
       const now=new Date(),age=data?now.getTime()-data.fetched:Infinity;
       const usable=enabled&&data&&age>=0&&age<=MAX_AGE;
       const p=phase(now,usable?data:null),kind=usable?(weatherLabels[data.code]||['unknown','Điều kiện chưa xác định','◈']):['unknown','Thời tiết theo vị trí','◈'];
@@ -64,27 +66,28 @@
     function locate(){return new Promise((resolve,reject)=>{if(!w.isSecureContext||!w.navigator.geolocation){reject(Error('Định vị cần HTTPS hoặc localhost.'));return;}w.navigator.geolocation.getCurrentPosition(resolve,reject,{enableHighAccuracy:true,timeout:12000,maximumAge:60000});});}
     function locationMessage(error){return error&&error.code===1?'Chưa cấp quyền vị trí. Bạn có thể bật trong trình duyệt.':error&&error.code===2?'Thiết bị chưa xác định được vị trí.':error&&error.code===3?'Định vị quá thời gian. Hãy thử lại.':(error&&error.message)||'Không thể cập nhật thời tiết.';}
     async function refresh(interactive){
-      if(!panel||busy||disposed||doc.hidden)return;
+      if(!onOverview()||busy||disposed||doc.hidden)return;
       // Never display a new browser permission prompt in the background.
-      if(!interactive){if(!enabled||!w.navigator.permissions)return;try{const perm=await w.navigator.permissions.query({name:'geolocation'});if(perm.state==='denied'){disable('Quyền vị trí đã bị thu hồi.');return;}if(perm.state!=='granted')return;}catch{return;}if(busy||disposed||!enabled||doc.hidden)return;}
+      if(!interactive){if(!enabled||!w.navigator.permissions)return;try{const perm=await w.navigator.permissions.query({name:'geolocation'});if(perm.state==='denied'){disable('Quyền vị trí đã bị thu hồi.');return;}if(perm.state!=='granted')return;}catch{return;}if(busy||disposed||!enabled||doc.hidden||!onOverview())return;}
       const current=++token;busy=true;enabled=true;lastError='';save();render();status('Đang xác định vị trí…');
       try{
-        const pos=await locate();if(current!==token||disposed)return;
+        const pos=await locate();if(current!==token||disposed||!onOverview())return;
         // Rounded coordinates only; no precise GPS, no tracking history, no database write.
         status('Đang lấy thời tiết theo khu vực…');controller=new w.AbortController();const requestController=controller;const timeout=w.setTimeout(()=>requestController.abort(),10000);
         let raw;try{const res=await w.fetch(urlFor(pos.coords.latitude,pos.coords.longitude),{signal:requestController.signal,credentials:'omit',referrerPolicy:'no-referrer',cache:'no-store'});if(!res.ok)throw Error('Dịch vụ thời tiết tạm thời không khả dụng.');raw=await res.json();}finally{w.clearTimeout(timeout);}
-        if(current!==token||disposed)return;
+        if(current!==token||disposed||!onOverview())return;
         data=normalize(raw,new Date());save();busy=false;render();
-      }catch(e){if(current!==token||disposed)return;busy=false;if(e&&e.code===1){disable(locationMessage(e));return;}render();status(locationMessage(e)+(data?' · Có thể còn dữ liệu lưu tạm.':''));}
+      }catch(e){if(current!==token||disposed||!onOverview())return;busy=false;if(e&&e.code===1){disable(locationMessage(e));return;}render();status(locationMessage(e)+(data?' · Có thể còn dữ liệu lưu tạm.':''));}
       finally{if(current===token)controller=null;}
     }
     if(panel){const cached=read(),pref=preference();if(pref==='1'||(pref===null&&cached&&cached.enabled===true)){enabled=true;data=cached&&cached.data&&Number.isFinite(cached.data.fetched)?cached.data:null;}
       w.addEventListener('storage',e=>{if(e.key===prefKey&&e.newValue==='0'&&(enabled||busy))disable('Đã tắt thời tiết ở tab khác.');}); $('enable').addEventListener('click',()=>refresh(true));$('disable').addEventListener('click',()=>disable());
       if(enabled&&w.navigator.permissions)w.navigator.permissions.query({name:'geolocation'}).then(p=>{if(p.state==='denied')disable('Quyền vị trí đã bị thu hồi.');p.addEventListener?.('change',()=>{if(p.state==='denied')disable('Quyền vị trí đã bị thu hồi.');});}).catch(()=>{});
-      if(enabled&&(!data||Date.now()-data.fetched>TTL))refresh(false);
+      if(onOverview()&&enabled&&(!data||Date.now()-data.fetched>TTL))refresh(false);
     }
     render();
-    let lastAttempt=Date.now();const tick=()=>{if(disposed)return;render();if(enabled&&!doc.hidden&&Date.now()-lastAttempt>=TTL){lastAttempt=Date.now();if(!data||Date.now()-data.fetched>=TTL)refresh(false);}};
+    let lastAttempt=Date.now();const tick=()=>{if(disposed)return;render();if(onOverview()&&enabled&&!doc.hidden&&Date.now()-lastAttempt>=TTL){lastAttempt=Date.now();if(!data||Date.now()-data.fetched>=TTL)refresh(false);}};
+    doc.addEventListener('sf:arena-view',()=>{if(!onOverview()){token++;if(controller)controller.abort();controller=null;busy=false;render();return;}render();if(enabled&&(!data||Date.now()-data.fetched>=TTL)){lastAttempt=Date.now();refresh(false);}});
     const timer=w.setInterval(tick,30000);doc.addEventListener('visibilitychange',tick);
     w.addEventListener('pagehide',e=>{if(e.persisted)return;disposed=true;token++;if(controller)controller.abort();w.clearInterval(timer);});
   }

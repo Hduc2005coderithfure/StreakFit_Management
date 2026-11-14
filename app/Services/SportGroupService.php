@@ -6,7 +6,7 @@ use DomainException;
 
 final class SportGroupService
 {
-    public const SPORTS = ['running'=>'Chạy bộ', 'cycling'=>'Đạp xe', 'walking'=>'Đi bộ', 'gym'=>'Gym', 'swimming'=>'Bơi lội', 'other'=>'Khác'];
+    public const SPORTS = ['running'=>'Chạy bộ', 'gym'=>'Gym'];
     public function __construct(private readonly PDO $db) {}
     public function save(int $actor, array $input, int $id = 0): int
     {
@@ -47,9 +47,11 @@ final class SportGroupService
             if (!$g) throw new DomainException('Không tìm thấy nhóm.');
             if (in_array($action,['archive','reopen'],true)) {
                 $this->assertManager($actor,$id);
+                if ($action==='reopen' && !isset(self::SPORTS[$g['sport']])) throw new DomainException('Hãy chuyển nhóm sang Chạy bộ hoặc Gym trước khi mở lại.');
                 $this->db->prepare('UPDATE sport_groups SET status=? WHERE id=?')->execute([$action==='archive'?'archived':'active',$id]);
                 (new AuditLogService($this->db))->record($actor,'group_'.$action,'sport_group',$id);
             } elseif ($action==='join') {
+                if (!isset(self::SPORTS[$g['sport']])) throw new DomainException('Nhóm này thuộc môn thể thao không còn hỗ trợ.');
                 if ($g['status']!=='active') throw new DomainException('Nhóm đã đóng.');
                 $this->db->prepare('INSERT IGNORE INTO sport_group_members (group_id,user_id) VALUES (?,?)')->execute([$id,$actor]);
             } elseif ($action==='leave') {
@@ -59,9 +61,9 @@ final class SportGroupService
             $this->db->commit();
         } catch (\Throwable $e) { if ($this->db->inTransaction()) $this->db->rollBack(); throw $e; }
     }
-    public function listing(int $actor,string $sport='',bool $all=false): array
+    public function listing(int $actor,string $sport='',bool $all=false,bool $includeLegacy=false): array
     {
-        $s=$this->db->prepare("SELECT g.*,u.display_name,(SELECT COUNT(*) FROM sport_group_members m WHERE m.group_id=g.id) AS members,EXISTS(SELECT 1 FROM sport_group_members m WHERE m.group_id=g.id AND m.user_id=?) AS joined FROM sport_groups g JOIN users u ON u.id=g.owner_id WHERE (?='' OR g.sport=?) AND (g.status='active' OR ?=1 OR g.owner_id=?) ORDER BY g.created_at DESC,g.id DESC LIMIT 100");
-        $s->execute([$actor,$sport,$sport,$all?1:0,$actor]);return $s->fetchAll();
+        $s=$this->db->prepare("SELECT g.*,u.display_name,(SELECT COUNT(*) FROM sport_group_members m WHERE m.group_id=g.id) AS members,EXISTS(SELECT 1 FROM sport_group_members m WHERE m.group_id=g.id AND m.user_id=?) AS joined FROM sport_groups g JOIN users u ON u.id=g.owner_id WHERE (?=1 OR g.sport IN ('running','gym')) AND (?='' OR g.sport=?) AND (g.status='active' OR ?=1 OR g.owner_id=?) ORDER BY g.created_at DESC,g.id DESC LIMIT 100");
+        $s->execute([$actor,$includeLegacy?1:0,$sport,$sport,$all?1:0,$actor]);return $s->fetchAll();
     }
 }

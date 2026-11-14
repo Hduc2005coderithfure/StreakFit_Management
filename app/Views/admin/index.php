@@ -6,10 +6,10 @@ $adminNavigation = [
     'overview' => ['Tổng quan', $canAdminDashboard],
     'members' => ['Thành viên', $canViewMembers || $canAdjustPoints],
     'reviews' => ['Buổi tập & kiểm duyệt', $canViewWorkouts || $canViewAppeals || $canViewContentReports],
-    'fund' => ['Quỹ kỷ luật', $canViewFund],
+    'fund' => ['Quỹ nhóm', $canViewFund],
     'reports' => ['Báo cáo & thống kê', $canViewAnalytics || $canViewAudit || $canViewCron],
     'settings' => ['Cài đặt nhóm', $canViewSettings],
-    'permissions' => ['Phân quyền Admin', $canManageAdminPermissions],
+    'permissions' => ['Phân quyền quản trị', $canManageAdminPermissions],
 ];
 $adminNavigation = array_filter($adminNavigation, static fn(array $item): bool => (bool)$item[1]);
 $pendingAdminCount = (int)$adminStats['pending_total'];
@@ -21,10 +21,12 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="theme-color" content="#0d0d13">
-    <title>StreakFit · Admin Center</title>
+    <title>StreakFit · Trung tâm quản trị</title>
     <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/admin.css')) ?>">
     <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-future.css')) ?>">
     <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-motion.css')) ?>">
+<link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-v37.css')) ?>">
+<link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-v45.css')) ?>">
 </head>
 <body class="admin-root sf-future" data-tab="admin">
 <a class="sr-only skip-link" href="#adminMain">Đến nội dung chính</a>
@@ -38,7 +40,7 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
                 <?php endforeach; ?>
             </nav>
         </div>
-        <div class="admin-sidebar-footer"><strong><?= $adminIcon('reviews') ?> Chế độ quản trị</strong><p>Quản lý cộng đồng bằng các quyền được cấp riêng.</p><a href="<?= sf_h(url('dashboard')) ?>">↗ Chuyển sang giao diện Member</a>
+        <div class="admin-sidebar-footer"><strong><?= $adminIcon('reviews') ?> Chế độ quản trị</strong><p>Quản lý cộng đồng bằng các quyền được cấp riêng.</p><a href="<?= sf_h(url('dashboard')) ?>">↗ Chuyển sang giao diện thành viên</a>
             <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="logout"><button class="admin-logout" type="submit"><?= $adminIcon('logout') ?> Đăng xuất</button></form>
         </div>
     </aside>
@@ -49,7 +51,7 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
 <?php if ($canViewFund): ?><a class="btn secondary" href="<?= e(url('admin/payments')) ?>">Đối soát chuyển khoản QR</a><?php endif; ?>
 </div>
         <header class="admin-workspace-header">
-            <div><span class="admin-overline">STREAKFIT / ADMIN CENTER</span><h1 data-admin-title>Tổng quan cộng đồng</h1><p data-admin-description>Theo dõi và quản lý hoạt động của nhóm trong một nơi.</p></div>
+            <div><span class="admin-overline">STREAKFIT / TRUNG TÂM QUẢN TRỊ</span><h1 data-admin-title>Tổng quan cộng đồng</h1><p data-admin-description>Theo dõi và quản lý hoạt động của nhóm trong một nơi.</p></div>
             <div class="admin-header-actions">
                 <span class="admin-role-chip"><?= $adminIcon('reviews') ?> Admin</span>
                 <button class="admin-circle admin-mobile-trigger" type="button" data-admin-toggle aria-controls="adminSidebar" aria-expanded="false" aria-label="Mở menu quản trị"><?= $adminIcon('menu') ?></button>
@@ -73,5 +75,6 @@ $mobileLabels = ['overview'=>'Tổng quan','members'=>'Thành viên','reviews'=>
 <script src="<?= sf_h(sf_asset_version('js/admin.js')) ?>" defer></script>
 <script src="<?= sf_h(sf_asset_version('js/streakfit-future.js')) ?>" defer></script>
 <script src="<?= sf_h(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script>
+
 </body>
 </html>

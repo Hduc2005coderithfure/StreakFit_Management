@@ -1,0 +1,2 @@
+const assert=require('node:assert/strict');const {relative}=require('../public/assets/js/arena-v41.js');const now=1700000000;
+assert.equal(relative('online',now,now),'Đang hoạt động');assert.equal(relative('hidden',null,now),'Đã ẩn trạng thái');assert.equal(relative('unknown',null,now),'Chưa ghi nhận');assert.equal(relative('offline',now-180,now),'3 phút trước');assert.equal(relative('offline',now-7200,now),'2 giờ trước');assert.equal(relative('offline',now-172800,now),'2 ngày trước');console.log('6 presence label cases passed');

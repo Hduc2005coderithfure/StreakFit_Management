@@ -603,7 +603,7 @@ if ($tab === 'feed') {
     $feedStmt = $db->prepare("SELECT w.id AS workout_id, w.user_id, w.checked_in_at, w.checked_out_at, w.duration_seconds, u.display_name, u.total_points, u.current_streak, p.caption, (SELECT COUNT(*) FROM workout_reactions r WHERE r.workout_id = w.id) AS reaction_count, (SELECT COUNT(*) FROM workout_comments c WHERE c.workout_id = w.id) AS comment_count, (SELECT r2.reaction FROM workout_reactions r2 WHERE r2.workout_id = w.id AND r2.user_id = ?) AS my_reaction FROM workouts w JOIN workout_posts p ON p.workout_id = w.id JOIN users u ON u.id = w.user_id WHERE w.status = 'valid' ORDER BY w.checked_out_at DESC LIMIT 20");
     $feedStmt->execute([$userId]);
     $feed = $feedStmt->fetchAll();
-    $activityStmt = $db->prepare("SELECT u.id, u.display_name, u.current_streak, w.status, w.checked_in_at, w.checked_out_at FROM users u JOIN workouts w ON w.id = (SELECT MAX(w2.id) FROM workouts w2 WHERE w2.user_id = u.id) WHERE u.id <> ? AND (w.status = 'in_progress' OR (w.status = 'valid' AND w.checked_out_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY))) ORDER BY (w.status = 'in_progress') DESC, w.checked_in_at DESC LIMIT 8");
+    $activityStmt = $db->prepare("SELECT u.id, u.display_name, u.current_streak, w.status, w.checked_in_at, w.checked_out_at FROM users u JOIN workouts w ON w.id = (SELECT MAX(w2.id) FROM workouts w2 WHERE w2.user_id = u.id) WHERE u.id <> ? AND u.is_active = 1 AND (w.status = 'in_progress' OR (w.status = 'valid' AND w.checked_out_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 7 DAY))) ORDER BY (w.status = 'in_progress') DESC, w.checked_in_at DESC LIMIT 8");
     $activityStmt->execute([$userId]);
     $activityMembers = $activityStmt->fetchAll();
     $activeTrainingCount = count(array_filter($activityMembers, static fn(array $member): bool => $member['status'] === 'in_progress'));
@@ -647,33 +647,77 @@ for ($day = 0; $day < 7; $day++) {
     $nextDates[] = $baseMonday->modify('+' . $day . ' days');
 }
 
-$healthStmt = $db->prepare('SELECT recorded_at, weight_kg FROM health_metrics WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 8');
-$healthStmt->execute([$userId]);
-$healthHistory = $healthStmt->fetchAll();
+$healthHistory = [];
+if ($tab === 'feed' || ($tab === 'profile' && ($_GET['section'] ?? '') === 'health')) {
+    $healthStmt = $db->prepare('SELECT recorded_at, weight_kg, height_cm FROM health_metrics WHERE user_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 30');
+    $healthStmt->execute([$userId]);
+    $healthHistory = $healthStmt->fetchAll();
+}
+$weekActivity = [];
+if ($tab === 'feed') {
+    $weekActivityStmt = $db->prepare("SELECT workout_date, COALESCE(SUM(duration_seconds), 0) AS seconds FROM workouts WHERE user_id = ? AND week_start = ? AND status = 'valid' GROUP BY workout_date ORDER BY workout_date");
+    $weekActivityStmt->execute([$userId, $currentWeek]);
+    $weekActivity = $weekActivityStmt->fetchAll();
+}
+// Read-only analytics; bounded to 84 days and two calendar months.
+$sf42Days = []; $sf42Monthly = []; $sf42MemberPlans = []; $sf42OwnAppeals = []; $sf42FundTotals = []; $sf42FundMine = [];
+if ($tab === 'feed') {
+    $today42 = new DateTimeImmutable('today', new DateTimeZone($config['timezone']));
+    $daily42 = $db->prepare("SELECT workout_date, COUNT(*) AS sessions, COALESCE(SUM(duration_seconds),0) AS seconds FROM workouts WHERE user_id = ? AND status = 'valid' AND workout_date BETWEEN ? AND ? GROUP BY workout_date ORDER BY workout_date");
+    $daily42->execute([$userId, $today42->modify('-83 days')->format('Y-m-d'), $today42->format('Y-m-d')]);
+    $sf42Days = $daily42->fetchAll();
+    $month42 = $today42->modify('first day of this month');
+    $monthQuery42 = $db->prepare("SELECT DATE_FORMAT(workout_date,'%Y-%m') AS month_key, COUNT(*) AS sessions, COUNT(DISTINCT workout_date) AS days, COALESCE(SUM(duration_seconds),0) AS seconds FROM workouts WHERE user_id = ? AND status = 'valid' AND workout_date BETWEEN ? AND ? GROUP BY month_key");
+    $monthQuery42->execute([$userId, $month42->modify('-1 month')->format('Y-m-d'), $today42->format('Y-m-d')]);
+    $sf42Monthly = $monthQuery42->fetchAll();
+    // Only dates and times of public planned workouts, never personal notes or health data.
+    $memberIds42 = array_values(array_unique(array_merge(array_map('intval', array_column($feed, 'user_id')), array_map('intval', array_column($activityMembers, 'id')))));
+    if ($memberIds42) {
+        $marks42 = implode(',', array_fill(0, count($memberIds42), '?'));
+        $plan42 = $db->prepare("SELECT user_id, planned_date, planned_time FROM planned_workouts WHERE week_start = ? AND user_id IN ($marks42) ORDER BY planned_date, planned_time");
+        $plan42->execute(array_merge([$currentWeek], $memberIds42));
+        foreach ($plan42->fetchAll() as $row42) $sf42MemberPlans[(int)$row42['user_id']][] = $row42;
+    }
+}
+if ($tab === 'leaderboard') {
+    $own42 = $db->prepare('SELECT id, week_start, status, created_at, resolved_at FROM appeals WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 20');
+    $own42->execute([$userId]); $sf42OwnAppeals = $own42->fetchAll();
+}
 $pointsLedgerStmt = $db->prepare('SELECT points, reason, created_at FROM points_ledger WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 30');
 $pointsLedgerStmt->execute([$userId]);
 $pointsLedger = $pointsLedgerStmt->fetchAll();
 
-$monthStart = (new DateTimeImmutable('first day of this month', new DateTimeZone($config['timezone'])))->format('Y-m-d');
-$db->prepare('INSERT IGNORE INTO monthly_funds (month_start, contribution_amount) VALUES (?, ?)')->execute([$monthStart, sf_settings()['monthly_contribution']]);
-$fundStmt = $db->prepare('SELECT * FROM monthly_funds WHERE month_start = ?');
-$fundStmt->execute([$monthStart]);
-$fund = $fundStmt->fetch();
-$fundMemberStmt = $db->prepare('SELECT * FROM fund_members WHERE fund_id = ? AND user_id = ?');
-$fundMemberStmt->execute([(int)$fund['id'], $userId]);
-$fundMember = $fundMemberStmt->fetch() ?: null;
-$fundSummaryStmt = $db->prepare("SELECT COUNT(DISTINCT fm.user_id) AS participants, COUNT(DISTINCT CASE WHEN fm.contribution_status = 'paid' THEN fm.user_id END) AS paid_count, (SELECT COALESCE(SUM(amount), 0) FROM fund_transactions WHERE fund_id = ? AND transaction_type IN ('contribution','penalty')) AS recorded_total FROM fund_members fm WHERE fm.fund_id = ? AND fm.opted_in = 1 GROUP BY fm.fund_id");
-$fundSummaryStmt->execute([(int)$fund['id'], (int)$fund['id']]);
-$fundSummary = $fundSummaryStmt->fetch() ?: ['participants' => 0, 'paid_count' => 0, 'recorded_total' => 0];
-$fundTransactionsStmt = $db->prepare('SELECT ft.*, u.display_name FROM fund_transactions ft JOIN users u ON u.id = ft.user_id WHERE ft.fund_id = ? ORDER BY ft.created_at DESC, ft.id DESC LIMIT 100');
-$fundTransactionsStmt->execute([(int)$fund['id']]);
-$fundTransactions = $fundTransactionsStmt->fetchAll();
-$fundProposalStmt = $db->prepare('SELECT p.user_id, p.amount, u.display_name FROM penalty_proposals p JOIN users u ON u.id = p.user_id WHERE p.fund_id = ? ORDER BY p.amount, p.created_at');
-$fundProposalStmt->execute([(int)$fund['id']]);
-$fundProposals = $fundProposalStmt->fetchAll();
-$fundVoteStmt = $db->prepare('SELECT amount, COUNT(*) AS votes FROM penalty_votes WHERE fund_id = ? GROUP BY amount ORDER BY votes DESC');
-$fundVoteStmt->execute([(int)$fund['id']]);
-$fundVotes = $fundVoteStmt->fetchAll();
+$fund = $fundMember = null; $fundSummary = ['participants'=>0,'paid_count'=>0,'recorded_total'=>0];
+$fundTransactions = $fundProposals = $fundVotes = [];
+$sf45NeedsFund = $tab === 'admin' || ($tab === 'profile' && ($_GET['section'] ?? '') === 'fund');
+if ($sf45NeedsFund) {
+    $monthStart = (new DateTimeImmutable('first day of this month', new DateTimeZone($config['timezone'])))->format('Y-m-d');
+    $db->prepare('INSERT IGNORE INTO monthly_funds (month_start, contribution_amount) VALUES (?, ?)')->execute([$monthStart, sf_settings()['monthly_contribution']]);
+    $fundStmt = $db->prepare('SELECT * FROM monthly_funds WHERE month_start = ?');
+    $fundStmt->execute([$monthStart]);
+    $fund = $fundStmt->fetch();
+    $fundMemberStmt = $db->prepare('SELECT * FROM fund_members WHERE fund_id = ? AND user_id = ?');
+    $fundMemberStmt->execute([(int)$fund['id'], $userId]);
+    $fundMember = $fundMemberStmt->fetch() ?: null;
+    $fundSummaryStmt = $db->prepare("SELECT COUNT(DISTINCT fm.user_id) AS participants, COUNT(DISTINCT CASE WHEN fm.contribution_status = 'paid' THEN fm.user_id END) AS paid_count, (SELECT COALESCE(SUM(amount), 0) FROM fund_transactions WHERE fund_id = ? AND transaction_type IN ('contribution','penalty')) AS recorded_total FROM fund_members fm WHERE fm.fund_id = ? AND fm.opted_in = 1 GROUP BY fm.fund_id");
+    $fundSummaryStmt->execute([(int)$fund['id'], (int)$fund['id']]);
+    $fundSummary = $fundSummaryStmt->fetch() ?: ['participants' => 0, 'paid_count' => 0, 'recorded_total' => 0];
+    $fundTransactionsStmt = $db->prepare('SELECT ft.*, u.display_name FROM fund_transactions ft JOIN users u ON u.id = ft.user_id WHERE ft.fund_id = ? ORDER BY ft.created_at DESC, ft.id DESC LIMIT 100');
+    $fundTransactionsStmt->execute([(int)$fund['id']]);
+    $fundTransactions = $fundTransactionsStmt->fetchAll();
+    if ($tab === 'profile' && ($_GET['section'] ?? '') === 'fund') {
+        $totals42 = $db->prepare('SELECT transaction_type, status, COALESCE(SUM(amount),0) AS amount FROM fund_transactions WHERE fund_id = ? GROUP BY transaction_type, status');
+        $totals42->execute([(int)$fund['id']]); $sf42FundTotals = $totals42->fetchAll();
+        $mine42 = $db->prepare('SELECT transaction_type, status, amount, created_at FROM fund_transactions WHERE fund_id = ? AND user_id = ? ORDER BY created_at DESC, id DESC LIMIT 100');
+        $mine42->execute([(int)$fund['id'], $userId]); $sf42FundMine = $mine42->fetchAll();
+    }
+    $fundProposalStmt = $db->prepare('SELECT p.user_id, p.amount, u.display_name FROM penalty_proposals p JOIN users u ON u.id = p.user_id WHERE p.fund_id = ? ORDER BY p.amount, p.created_at');
+    $fundProposalStmt->execute([(int)$fund['id']]);
+    $fundProposals = $fundProposalStmt->fetchAll();
+    $fundVoteStmt = $db->prepare('SELECT amount, COUNT(*) AS votes FROM penalty_votes WHERE fund_id = ? GROUP BY amount ORDER BY votes DESC');
+    $fundVoteStmt->execute([(int)$fund['id']]);
+    $fundVotes = $fundVoteStmt->fetchAll();
+}
 $canAdminDashboard = $permissionService->can($userId, 'dashboard.view');
 $canViewMembers = $permissionService->can($userId, 'members.view');
 $canManageMembers = $permissionService->can($userId, 'members.manage');
@@ -820,7 +864,7 @@ if ($tab === 'admin' && $canAdminDashboard) {
     }
 }
 $fundMembers = [];
-if ($tab !== 'admin' && $canManageFund) {
+if ($tab !== 'admin' && $canManageFund && $sf45NeedsFund) {
     $fundMembersStmt = $db->prepare('SELECT fm.user_id, fm.contribution_status, u.display_name FROM fund_members fm JOIN users u ON u.id = fm.user_id WHERE fm.fund_id = ? AND fm.opted_in = 1 ORDER BY u.display_name');
     $fundMembersStmt->execute([(int)$fund['id']]);
     $fundMembers = $fundMembersStmt->fetchAll();

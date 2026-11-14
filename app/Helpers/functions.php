@@ -149,7 +149,7 @@ function sf_rank_emblem(array $rank, string $class = 'rank-emblem'): string
     $slug = (string)($rank['slug'] ?? 'dong');
     $allowed = array_column(sf_rank_catalog(), 'slug');
     if (!in_array($slug, $allowed, true)) $slug = 'dong';
-    return '<img class="' . sf_h($class) . '" src="' . sf_h(asset('ranks/' . $slug . '.svg')) . '" alt="" aria-hidden="true" width="40" height="46" loading="lazy">';
+    return '<img class="' . sf_h($class) . '" src="' . sf_h(sf_asset_version('ranks/' . $slug . '-v44.webp')) . '" alt="" aria-hidden="true" width="40" height="46" loading="lazy">';
 }
 
 function sf_csrf_token(): string
@@ -340,4 +340,14 @@ function sf_format_time(?string $utcDateTime, string $format = 'H:i'): string
     }
     $date = new DateTimeImmutable($utcDateTime, new DateTimeZone('UTC'));
     return $date->setTimezone(new DateTimeZone(sf_config()['timezone']))->format($format);
+}
+
+/** Presentation state only; never changes points or workout validity. */
+function sf_week_energy_state(int $done, int $goal): string
+{
+    if ($goal <= 0) return 'unplanned';
+    if ($done > $goal) return 'surplus';
+    if ($done === $goal) return 'complete';
+    if ($done <= 0) return 'idle';
+    return round(100 * $done / $goal) >= 67 ? 'surge' : 'charge';
 }

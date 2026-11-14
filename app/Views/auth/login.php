@@ -19,14 +19,16 @@ $title = ['register' => 'Bắt đầu hành trình', 'forgot' => 'Quên mật kh
     <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/streakfit-motion.css')) ?>">
     <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-v3.css')) ?>">
     <link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-atmosphere.css')) ?>">
+<link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-v37.css')) ?>">
+<link rel="stylesheet" href="<?= sf_h(sf_asset_version('css/arena-v45.css')) ?>">
 </head>
-<body class="auth-page sf-future sf-arena" data-sf36-clock-only>
+<body class="auth-page sf-future sf-arena" data-sf37-auth-mode="<?= sf_h($mode) ?>">
 <main class="auth-shell">
     <div class="auth-showcase arena-auth-showcase" aria-hidden="true">
         <canvas data-arena-auth aria-hidden="true"></canvas>
-        <div class="auth-showcase-head"><span>STREAKFIT // COMMUNITY</span><span>✦</span></div>
+        <div class="auth-showcase-head"><span>STREAKFIT / CỘNG ĐỒNG</span><span>✦</span></div>
         <div class="auth-orbit"><div class="auth-orbit-core">SF</div><i></i><i></i><i></i></div>
-        <div class="auth-showcase-copy"><span>THE DISCIPLINE ARENA</span><strong>BÌNH NGUYÊN<br><em>VÔ TẬN.</em></strong><p>Kỷ luật hôm nay. Sức mạnh ngày mai.</p></div>
+        <div class="auth-showcase-copy"><span>ĐẤU TRƯỜNG KỶ LUẬT</span><strong>BÌNH NGUYÊN<br><em>VÔ TẬN.</em></strong><p>Kỷ luật hôm nay. Sức mạnh ngày mai.</p></div>
         <div class="auth-showcase-foot"><span>01 / KỶ LUẬT</span><span>02 / CỘNG ĐỒNG</span><span>03 / TIẾN BỘ</span></div>
     </div>
     <a class="brand auth-brand" href="<?= sf_h(url('login')) ?>"><span>Streak<i>Fit</i></span><small>Rèn luyện cùng nhau</small></a>
@@ -36,10 +38,10 @@ $title = ['register' => 'Bắt đầu hành trình', 'forgot' => 'Quên mật kh
         <p class="muted">Tạo thói quen bền vững, theo dõi từng buổi tập và giữ chuỗi cùng cộng đồng.</p>
         <?php if ($flash): ?><div class="alert <?= sf_h($flash['type']) ?>"><?= sf_h($flash['message']) ?></div><?php endif; ?>
         <?php if (in_array($mode, ['login', 'register'], true)): ?>
-        <div class="auth-switch">
-            <a class="<?= $mode === 'login' ? 'active' : '' ?>" href="<?= sf_h(url('login')) ?>">Đăng nhập</a>
-            <a class="<?= $mode === 'register' ? 'active' : '' ?>" href="<?= sf_h(url('register')) ?>">Tạo tài khoản</a>
-        </div>
+        <nav class="auth-switch" aria-label="Đăng nhập hoặc đăng ký">
+            <a class="<?= $mode === 'login' ? 'active' : '' ?>" href="<?= sf_h(url('login')) ?>" <?= $mode === 'login' ? 'aria-current="page"' : '' ?>>Đăng nhập</a>
+            <a class="<?= $mode === 'register' ? 'active' : '' ?>" href="<?= sf_h(url('register')) ?>" <?= $mode === 'register' ? 'aria-current="page"' : '' ?>>Tạo tài khoản</a>
+        </nav>
         <?php endif; ?>
         <form method="post" action="<?= sf_h(url($target)) ?>" class="stack-form">
             <input type="hidden" name="_csrf" value="<?= sf_h(sf_csrf_token()) ?>">
@@ -47,7 +49,7 @@ $title = ['register' => 'Bắt đầu hành trình', 'forgot' => 'Quên mật kh
             <?php if ($mode === 'reset'): ?><input type="hidden" name="token" value="<?= sf_h($_GET['token'] ?? '') ?>"><?php endif; ?>
             <?php if ($mode === 'register'): ?><label>Tên hiển thị<input name="display_name" maxlength="80" required autocomplete="name"></label><?php endif; ?>
             <?php if (in_array($mode, ['login', 'register', 'forgot'], true)): ?><label>Email<input name="email" type="email" maxlength="190" required autocomplete="email" placeholder="ban@email.com"></label><?php endif; ?>
-            <?php if (in_array($mode, ['login', 'register', 'reset'], true)): ?><label><?= $mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu' ?><input name="password" type="password" minlength="8" maxlength="72" required autocomplete="<?= $mode === 'login' ? 'current-password' : 'new-password' ?>" placeholder="8 đến 72 byte"></label><?php endif; ?>
+            <?php if (in_array($mode, ['login', 'register', 'reset'], true)): ?><label for="sf37-password"><?= $mode === 'reset' ? 'Mật khẩu mới' : 'Mật khẩu' ?></label><div class="sf37-password"><input id="sf37-password" name="password" type="password" minlength="8" maxlength="72" required autocomplete="<?= $mode === 'login' ? 'current-password' : 'new-password' ?>" placeholder="Nhập mật khẩu"><button type="button" class="sf37-password-toggle" data-sf37-password="sf37-password" aria-label="Hiện mật khẩu" aria-pressed="false" hidden>Hiện</button></div><?php if ($mode !== 'login'): ?><small class="sf37-password-hint">Dùng ít nhất 8 ký tự, tối đa 72 byte. Ký tự có dấu có thể chiếm nhiều byte.</small><?php endif; ?><?php endif; ?>
             <button class="btn primary full" type="submit"><?= ['register' => 'Tạo tài khoản StreakFit', 'forgot' => 'Gửi liên kết đặt lại', 'reset' => 'Lưu mật khẩu mới'][$mode] ?? 'Đăng nhập' ?><span>→</span></button>
         </form>
         <?php if ($mode === 'login'): ?><p class="auth-foot"><a href="<?= sf_h(url('forgot-password')) ?>">Quên mật khẩu?</a></p><?php elseif (in_array($mode, ['forgot', 'reset'], true)): ?><p class="auth-foot"><a href="<?= sf_h(url('login')) ?>">Quay lại đăng nhập</a></p><?php endif; ?>
@@ -59,6 +61,7 @@ $title = ['register' => 'Bắt đầu hành trình', 'forgot' => 'Quên mật kh
 <script src="<?= sf_h(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script>
 <script src="<?= sf_h(sf_asset_version('js/arena-3d.js')) ?>" defer></script>
 <script src="<?= sf_h(sf_asset_version('js/arena-ui.js')) ?>" defer></script>
-<script src="<?= sf_h(sf_asset_version('js/arena-atmosphere.js')) ?>" defer></script>
+
+<script src="<?= sf_h(sf_asset_version('js/arena-v37.js')) ?>" defer></script>
 </body>
 </html>

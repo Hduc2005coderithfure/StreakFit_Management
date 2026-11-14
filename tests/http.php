@@ -41,7 +41,7 @@ $coach=json_decode($body,true);$assert($code===200&&($coach['mode']??'')==='loca
 [$code]=$request('/admin/payments');$assert($code===403,'member denied payment administration');
 [$code,$html]=$request('/groups');$token=$csrf($html);
 [$code]=$request('/groups',['_csrf'=>'bad','action'=>'join','group_id'=>1]);$assert($code===419,'CSRF rejects invalid token');
-[$code]=$request('/groups',['_csrf'=>$token,'action'=>'save','name'=>'HTTP Cycling','sport'=>'cycling','meeting_point'=>'Park']);$assert($code===303,'group creation through authenticated form');
+[$code]=$request('/groups',['_csrf'=>$token,'action'=>'save','name'=>'HTTP Gym','sport'=>'gym','meeting_point'=>'Park']);$assert($code===303,'group creation through authenticated form');
 $s=$db->prepare('SELECT id FROM users WHERE email=?');$s->execute([$email]);$uid=(int)$s->fetchColumn();
 $bank=new App\Services\BankTransferService($db);
 $bank->saveConfiguration($admin,['bank_bin'=>'970415','bank_account'=>'1234567890','bank_holder'=>'NGUYEN VAN A']);

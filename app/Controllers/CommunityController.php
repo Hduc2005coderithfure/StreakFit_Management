@@ -55,7 +55,7 @@ final class CommunityController
         $rows=[];$fund=null;$fundMember=null;$edit=null;$route=null;
         $bankConfig=[];$bankReady=false;$bankRequest=null;$bankRequests=[];
         if ($page==='groups' || $page==='admin_groups') {
-            $rows=$groups->listing($userId,(string)$request->query('sport',''),$canManageGroups);
+            $rows=$groups->listing($userId,(string)$request->query('sport',''),$canManageGroups,$admin);
             $editId=(int)$request->query('edit',0);
             foreach($rows as $row) if ((int)$row['id']===$editId && ((int)$row['owner_id']===$userId || $canManageGroups)) $edit=$row;
         } elseif ($page==='payments' || $page==='admin_payments') {

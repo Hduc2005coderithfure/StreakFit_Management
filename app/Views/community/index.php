@@ -1,39 +1,58 @@
 <?php
-$titles=['groups'=>'Nhóm thể thao','admin_groups'=>'Quản lý nhóm thể thao','payments'=>'Nộp quỹ trực tuyến','admin_payments'=>'Đối soát chuyển khoản','route'=>'Đường tập GPS'];
+$titles=['groups'=>'Nhóm thể thao','admin_groups'=>'Quản lý nhóm thể thao','payments'=>'Nộp quỹ trực tuyến','admin_payments'=>'Đối soát chuyển khoản','route'=>'Đường chạy GPS'];
 $sports=\App\Services\SportGroupService::SPORTS;
+// Defense in depth: member pages never offer unsupported legacy sports.
+if (!$admin && $page==='groups') $rows=array_values(array_filter($rows,static fn($g)=>isset($sports[$g['sport']])));
+$legacySportLabels=['cycling'=>'Đạp xe','walking'=>'Đi bộ','swimming'=>'Bơi lội','other'=>'Khác'];
+$sportLabel=static fn($sport)=>$sports[$sport]??('Môn cũ: '.($legacySportLabels[$sport]??$sport));
 $states=['creating'=>'Đang tạo','pending'=>'Chờ thanh toán','paid'=>'Đã nhận tiền','cancelled'=>'Đã hủy','expired'=>'Hết hạn','review'=>'Cần đối soát'];
+if (!$admin) {
+    $tab=$page; $arenaView=''; $profileSection='overview';
+    $arenaPoints=(int)($user['total_points']??0); $rank=sf_rank($arenaPoints);
+    $unreadCount=0; // Independent view has no notification count; do not invent one.
+    $canAdminDashboard=isset($permissions) && $permissions->can($userId,'dashboard.view');
+    require APP_ROOT . '/app/Views/components/arena-icons.php';
+}
 $flash=$_SESSION['sf_flash']??null;unset($_SESSION['sf_flash']);
 ?>
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($titles[$page]) ?> · StreakFit</title><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/community.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit-future.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit-motion.css')) ?>"><?php if (!$admin): ?><link rel="stylesheet" href="<?= e(sf_asset_version('css/arena-atmosphere.css')) ?>"><?php endif; ?></head>
-<body class="sf-future sf-community"><div class="community-shell"><header class="topbar"><a class="brand" href="<?= e(url('dashboard')) ?>"><span>Streak<i>Fit</i></span><small><?= e($user['display_name']) ?></small></a><a href="<?= e(url($admin?'admin':'profile')) ?>">← <?= $admin?'Admin':'Cá nhân' ?></a></header><?php if (!$admin) require APP_ROOT . '/app/Views/components/arena-atmosphere.php'; ?><main class="page-content">
-<nav class="sub-tabs"><a href="<?= e(url('groups')) ?>">Nhóm thể thao</a><a href="<?= e(url('workouts')) ?>">Check-in</a><a href="<?= e(url('fund/payments')) ?>">Nộp quỹ</a></nav>
-<div class="page-intro"><h1><?= e($titles[$page]) ?></h1></div>
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= e($titles[$page]) ?> · StreakFit</title><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/community.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit-future.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/streakfit-motion.css')) ?>"><link rel="stylesheet" href="<?= e(sf_asset_version('css/arena-v37.css')) ?>">
+<?php if (!$admin): ?>
+<?php foreach (['arena-v3','arena-v32','arena-v33','arena-v35','arena-v38','arena-v39','arena-v40','arena-v41','arena-v42','arena-v45'] as $style): ?><link rel="stylesheet" href="<?= e(sf_asset_version('css/'.$style.'.css')) ?>"><?php endforeach; ?>
+<?php endif; ?></head>
+<body class="sf-future sf-community<?= !$admin?' sf-arena sf40-workspace sf40-independent':'' ?>" <?= !$admin?'data-tab="'.e($page).'" data-timezone="'.e(app_config()['timezone']).'"':'' ?>><div class="community-shell<?= !$admin?' app-shell':'' ?>"><?php if (!$admin) require APP_ROOT . '/app/Views/components/arena-workspace.php'; ?><header class="topbar"><a class="brand" href="<?= e(url('dashboard')) ?>"><span>Streak<i>Fit</i></span><small><?= e($user['display_name']) ?></small></a><?php if (!$admin): ?><div class="sf39-top-title"><span>StreakFit</span><strong><?= e($titles[$page]) ?></strong></div><?php endif; ?><a href="<?= e(url($admin?'admin':'profile')) ?>"><?= $admin?'← Quản trị':'Cá nhân' ?></a></header><main class="page-content">
+<?php if ($admin): ?><nav class="sub-tabs sf40-community-tabs"><a href="<?= e(url('groups')) ?>" <?= $page==='groups'?'aria-current="page"':'' ?>>Nhóm thể thao</a><a href="<?= e(url('workouts')) ?>">Tập luyện</a><a href="<?= e(url('fund/payments')) ?>" <?= $page==='payments'?'aria-current="page"':'' ?>>Nộp quỹ</a></nav><?php endif; ?>
+<div class="page-intro"><h1><?= e($titles[$page]) ?></h1><?php if (!$admin && $page==='groups'): ?><p class="muted">Tìm đồng đội chạy bộ hoặc tập gym.</p><?php endif; ?></div>
 <?php if($error): ?><p class="alert error" role="alert"><?= e($error) ?></p><?php endif; ?>
 <?php if($flash): ?><p class="alert" role="status"><?= e($flash['message']) ?></p><?php endif; ?>
 <?php if(in_array($page,['groups','admin_groups'],true)): ?>
-<form method="get" class="stack-form"><label>Lọc môn thể thao<select name="sport"><option value="">Tất cả</option><?php foreach($sports as $key=>$label): ?><option value="<?= e($key) ?>" <?= ($_GET['sport']??'')===$key?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></label><button class="btn secondary">Lọc nhóm</button></form>
+<?php if(!$admin): ?><noscript><?php endif; ?><form method="get" class="stack-form"><label>Lọc môn thể thao<select name="sport"><option value="">Tất cả</option><?php foreach($sports as $key=>$label): ?><option value="<?= e($key) ?>" <?= ($_GET['sport']??'')===$key?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></label><button class="btn secondary">Lọc nhóm</button></form><?php if(!$admin): ?></noscript><?php if(!empty($_GET['sport'])): ?><p class="muted">Đang xem một môn thể thao từ bộ lọc trước. <a href="<?= e(url('groups')) ?>">Xem tất cả nhóm</a></p><?php endif; endif; ?>
 <details class="panel" <?= $edit?'open':'' ?>><summary><?= $edit?'Chỉnh sửa nhóm':'＋ Tạo nhóm thể thao' ?></summary>
 <form method="post" class="stack-form"><?= csrf_field() ?><input type="hidden" name="action" value="save"><input type="hidden" name="group_id" value="<?= (int)($edit['id']??0) ?>">
 <label>Tên nhóm<input name="name" minlength="3" maxlength="100" required value="<?= e($edit['name']??'') ?>"></label>
-<label>Môn thể thao<select name="sport"><?php foreach($sports as $key=>$label): ?><option value="<?= e($key) ?>" <?= ($edit['sport']??'running')===$key?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></label>
+<label>Môn thể thao<select name="sport" required><?php if($edit && !isset($sports[$edit['sport']])): ?><option value="" disabled selected>Chọn môn mới</option><?php endif; ?><?php foreach($sports as $key=>$label): ?><option value="<?= e($key) ?>" <?= ($edit['sport']??'running')===$key?'selected':'' ?>><?= e($label) ?></option><?php endforeach; ?></select></label>
 <label>Giới thiệu<textarea name="description" maxlength="1000"><?= e($edit['description']??'') ?></textarea></label>
 <label>Điểm hẹn<input name="meeting_point" maxlength="255" required placeholder="Tên công viên, địa chỉ…" value="<?= e($edit['meeting_point']??'') ?>"></label>
-<label>Điểm đến dự kiến (tùy chọn)<input name="destination" maxlength="255" value="<?= e($edit['destination']??'') ?>"></label>
-<label>Buổi hẹn tiếp theo (<?= e(app_config()['timezone']) ?>)<input name="meeting_at" type="datetime-local" value="<?= !empty($edit['meeting_at'])?e(sf_format_time($edit['meeting_at'],'Y-m-d\TH:i')):'' ?>"></label><button class="btn primary">Lưu nhóm</button></form></details>
-<?php if(!$rows): ?><div class="empty-state">Chưa có nhóm phù hợp. Hãy tạo nhóm đầu tiên.</div><?php endif; ?>
+<label>Điểm đến dự kiến khi chạy (tùy chọn)<input name="destination" maxlength="255" value="<?= e($edit['destination']??'') ?>"></label>
+<label>Buổi hẹn tiếp theo (giờ địa phương)<input name="meeting_at" type="datetime-local" value="<?= !empty($edit['meeting_at'])?e(sf_format_time($edit['meeting_at'],'Y-m-d\TH:i')):'' ?>"></label><button class="btn primary">Lưu nhóm</button></form></details>
+<?php if($admin && $page==='admin_groups'): ?><p class="muted">Nhóm thuộc môn cũ được giữ nguyên dữ liệu. Chuyển sang Chạy bộ hoặc Gym trước khi mở lại.</p><?php endif; ?><?php if(!$rows): ?><div class="empty-state">Chưa có nhóm phù hợp. Hãy tạo nhóm đầu tiên.</div><?php endif; ?>
+<?php if (!$admin): ?><section class="sf42-group-summary"><div><small>Nhóm hiện có</small><strong><?= count($rows) ?></strong></div><div><small>Đang tham gia</small><strong><?= count(array_filter($rows,static fn($g)=>!empty($g['joined']) || (int)$g['owner_id']===$userId)) ?></strong></div><div><small>Đang mở</small><strong><?= count(array_filter($rows,static fn($g)=>$g['status']==='active')) ?></strong></div></section>
+<div class="sf42-filter" data-sf42-groups><label>Tìm nhóm<input type="search" data-sf42-group-search placeholder="Tên nhóm, môn thể thao…"></label><label>Môn thể thao<select data-sf42-group-sport><option value="">Tất cả</option><?php foreach($sports as $key=>$label): ?><option value="<?= e($key) ?>"><?= e($label) ?></option><?php endforeach; ?></select></label><label>Trạng thái<select data-sf42-group-state><option value="">Tất cả</option><option value="mine">Đang tham gia</option><option value="active">Đang mở</option></select></label></div><p data-sf42-group-empty hidden>Không tìm thấy nhóm phù hợp.</p><?php endif; ?>
+<div class="sf40-group-grid">
 <?php foreach($rows as $g): ?>
-<article class="panel"><div class="section-heading"><h2><?= e($g['name']) ?></h2><span class="rank-chip"><?= e($sports[$g['sport']]??$g['sport']) ?></span></div><p><?= nl2br(e($g['description'])) ?></p>
+<article class="panel sf40-group-card" data-sport="<?= e($g['sport']) ?>" data-sf42-group data-state="<?= e($g['status']) ?>" data-mine="<?= !empty($g['joined']) || (int)$g['owner_id']===$userId ? '1':'0' ?>" data-name="<?= e($g['name'].' '.($sportLabel($g['sport']))) ?>">
+<?php if(!$admin): ?><div class="sf42-group-cover" aria-hidden="true"><span><?= $arenaIcon(match($g['sport']){'running'=>'activity','gym'=>'plus',default=>'people'}) ?></span><b><?= e($sportLabel($g['sport'])) ?></b><i></i></div><?php endif; ?><div class="section-heading"><h2><?= e($g['name']) ?></h2><span class="rank-chip"><?= e($sportLabel($g['sport'])) ?></span></div><p><?= nl2br(e($g['description'])) ?></p>
 <p class="muted"><?= e($g['display_name']) ?> · <?= (int)$g['members'] ?> thành viên · <?= $g['status']==='active'?'Đang mở':'Đã đóng' ?></p><p>📍 <?= e($g['meeting_point']) ?><?= $g['destination']?' → '.e($g['destination']):'' ?></p>
 <?php if($g['meeting_at']): ?><p>📅 <?= e(sf_format_time($g['meeting_at'],'d/m/Y H:i')) ?></p><?php endif; ?>
 <a class="btn secondary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?<?= e(http_build_query(['api'=>1,'query'=>$g['meeting_point']])) ?>">Mở điểm hẹn trên Google Maps ↗</a>
 <div class="community-actions">
 <?php if((int)$g['owner_id']===$userId || $canManageGroups): ?>
 <a class="btn secondary" href="?edit=<?= (int)$g['id'] ?>">Chỉnh sửa</a>
-<form method="post"><?= csrf_field() ?><input type="hidden" name="group_id" value="<?= (int)$g['id'] ?>"><button class="btn secondary" name="action" value="<?= $g['status']==='active'?'archive':'reopen' ?>"><?= $g['status']==='active'?'Đóng nhóm':'Mở lại nhóm' ?></button></form>
+<?php if ($g['status']==='active' || isset($sports[$g['sport']])): ?><form method="post"><?= csrf_field() ?><input type="hidden" name="group_id" value="<?= (int)$g['id'] ?>"><button class="btn secondary" name="action" value="<?= $g['status']==='active'?'archive':'reopen' ?>"><?= $g['status']==='active'?'Đóng nhóm':'Mở lại nhóm' ?></button></form><?php endif; ?>
 <?php endif; ?>
-<?php if((int)$g['owner_id']!==$userId && ($g['joined'] || $g['status']==='active')): ?><form method="post"><?= csrf_field() ?><input type="hidden" name="group_id" value="<?= (int)$g['id'] ?>"><button class="btn primary" name="action" value="<?= $g['joined']?'leave':'join' ?>"><?= $g['joined']?'Rời nhóm':'Tham gia' ?></button></form><?php endif; ?>
+<?php if((int)$g['owner_id']!==$userId && ($g['joined'] || ($g['status']==='active' && isset($sports[$g['sport']])))): ?><form method="post"><?= csrf_field() ?><input type="hidden" name="group_id" value="<?= (int)$g['id'] ?>"><button class="btn primary" name="action" value="<?= $g['joined']?'leave':'join' ?>"><?= $g['joined']?'Rời nhóm':'Tham gia' ?></button></form><?php endif; ?>
 </div></article>
 <?php endforeach; ?>
+</div>
 <?php elseif(in_array($page,['payments','admin_payments'],true)): ?>
 <?php if(!$admin): ?><section class="panel"><h2>Quỹ tháng <?= e(date('m/Y')) ?></h2><p>Mức đóng: <strong><?= number_format((int)$fund['contribution_amount']) ?>đ</strong></p>
 <?php if(!$fundMember || !$fundMember['opted_in']): ?><a class="btn secondary" href="<?= e(url('profile?section=fund')) ?>">Tham gia quỹ trước khi nộp</a>
@@ -76,9 +95,9 @@ $flash=$_SESSION['sf_flash']??null;unset($_SESSION['sf_flash']);
 <?php if((int)$route['workout']['user_id']===$userId): ?>
 <?php if($route['workout']['status']==='in_progress'): ?><div class="community-actions"><button class="btn primary" id="gpsStart">Bật theo dõi GPS</button><button class="btn secondary" id="gpsStop" disabled>Dừng theo dõi</button></div><p class="muted">Cần cho phép vị trí và giữ trang này mở khi tập. Trình duyệt có thể ngừng GPS khi khóa màn hình. Điểm có độ chính xác thấp sẽ được bỏ qua.</p><?php endif; ?>
 <button class="text-link danger-link" id="gpsDelete">Xóa dữ liệu GPS buổi này</button><?php endif; ?>
-<div id="routeMap" class="route-map"><?php if(!app_config()['google_maps_key']): ?><p>Bản đồ đang chờ cấu hình Google Maps. Bạn vẫn có thể lưu GPS.</p><?php endif; ?></div><a class="btn secondary" href="<?= e(url('workouts')) ?>">Về check-in / check-out</a></section>
+<div id="routeMap" class="route-map"><?php if(!app_config()['google_maps_key']): ?><p>Bản đồ đang chờ cấu hình Google Maps. Bạn vẫn có thể lưu GPS.</p><?php endif; ?></div><a class="btn secondary" href="<?= e(url('workouts')) ?>">Về trang tập luyện</a></section>
 <script id="routeData" type="application/json"><?= json_encode(['id'=>(int)$route['workout']['id'],'owner'=>(int)$route['workout']['user_id']===$userId,'points'=>$route['points'],'csrf'=>sf_csrf_token(),'endpoint'=>url('api/workout-route')],JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_THROW_ON_ERROR) ?></script>
 <script src="<?= e(sf_asset_version('js/route.js')) ?>"></script>
 <?php if(app_config()['google_maps_key']): ?><script async src="https://maps.googleapis.com/maps/api/js?key=<?= e(rawurlencode(app_config()['google_maps_key'])) ?>&amp;callback=initStreakFitRoute&amp;loading=async"></script><?php endif; ?>
 <?php endif; ?>
-</main></div><script src="<?= e(sf_asset_version('js/streakfit-future.js')) ?>" defer></script><script src="<?= e(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script><?php if (!$admin): ?><script src="<?= e(sf_asset_version('js/arena-atmosphere.js')) ?>" defer></script><?php endif; ?></body></html>
+</main><?php if (!$admin) require APP_ROOT . '/app/Views/components/arena-dock.php'; ?></div><script src="<?= e(sf_asset_version('js/streakfit-future.js')) ?>" defer></script><script src="<?= e(sf_asset_version('js/streakfit-motion.js')) ?>" defer></script><?php if (!$admin): ?><script src="<?= e(sf_asset_version('js/arena-v40.js')) ?>" defer></script><?php endif; ?><?php if (!$admin): ?><script src="<?= e(sf_asset_version('js/arena-v42.js')) ?>" defer></script><?php endif; ?><script src="<?= sf_h(sf_asset_version('js/arena-v41.js')) ?>" defer></script></body></html>
